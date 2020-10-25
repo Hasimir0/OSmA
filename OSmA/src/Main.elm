@@ -161,7 +161,7 @@ selectionRow model =
         [ spacing 30 ]
         [ column
             []
-            [ text ("This is Round number " ++ (String.fromInt model.roundCounter) )
+            [ text ("This is Round " ++ (String.fromInt model.roundCounter) )
             , text "Who will make the next Move?"
             ]
         , column
