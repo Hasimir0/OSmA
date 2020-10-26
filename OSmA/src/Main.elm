@@ -12,10 +12,10 @@ import Array exposing (Array)
 
 
 -- MAIN
-main : Program () Model Msg
+main : Program () StatusModel Msg
 main =
     Browser.sandbox
-        { init = initModel
+        { init = statusModel
         , update = update
         , view = view
         }
@@ -23,29 +23,15 @@ main =
 
 
 -- MODEL
-type alias Model =
-    { advList : List Adventurer
-    , roundCounter : Int
+type alias StatusModel =
+    { roundCounter : Int
     , navPoints : Int
     , sitchStatus : List String
     }
 
-type alias Adventurer =
-    { name : String
-    , canMove : Bool
-    }
-
-dummyAdventurersList : List Adventurer
-dummyAdventurersList =
-        [ { name = "The Nameless One" , canMove = True }
-        , { name = "Fake Player" , canMove = True }
-        , { name = "Sir Placeholder" , canMove = True }
-        ]
-
-initModel : Model
-initModel =
-    { advList = dummyAdventurersList
-    , roundCounter = 0
+statusModel : StatusModel
+statusModel =
+    { roundCounter = 0
     , navPoints = 0
     , sitchStatus =
         [ "You are in a simple, safe, small space."
@@ -53,17 +39,31 @@ initModel =
         ]
     }
 
+type alias Adventurer =
+    { name : String
+    , canMove : Bool
+    , isActive : Bool
+    }
 
+type alias AdvList = List Adventurer
+
+advList : AdvList
+advList =
+        [ { name = "The Nameless One" , canMove = True, isActive = False }
+        , { name = "Fake Player" , canMove = True, isActive = False }
+        , { name = "Sir Placeholder" , canMove = True, isActive = False }
+        ]
 
 type Msg =
     Navigate
     | Search
     | SolveProblems
+    | ActivateAdv
 
 
 
 -- UPDATE
-update : Msg -> Model -> Model
+update : Msg -> StatusModel -> StatusModel
 update msg model = 
     case msg of
         Navigate ->
@@ -72,11 +72,16 @@ update msg model =
             model
         SolveProblems ->
             model
+        ActivateAdv ->
+            model 
 
+
+
+       
 
 
 -- VIEW
-view : Model -> Html msg
+view : StatusModel -> Html msg
 view model =
     Element.layout
         [ Background.color (rgb255 240 240 240)
@@ -123,7 +128,7 @@ bulletListBuilder : String -> Element msg
 bulletListBuilder myList =
     el [] ( paragraph [padding 5, spacing 5] [text ("+ " ++ myList) ] )
 
-sitchRow : Model -> Element msg
+sitchRow : StatusModel -> Element msg
 sitchRow model =
     row
         [ centerX
@@ -132,7 +137,7 @@ sitchRow model =
         , Background.color (rgb255 211 211 211)
         ]
         [ column stdColumn
-            (List.map bulletListBuilder initModel.sitchStatus)
+            (List.map bulletListBuilder statusModel.sitchStatus)
             
 
         , column stdColumn
@@ -144,7 +149,7 @@ sitchRow model =
                 [ myButtons "Get Your Bearings"
                 , text " ?"
                 ]
-            , text (" (" ++ String.fromInt initModel.navPoints ++ " left)")
+            , text (" (" ++ String.fromInt statusModel.navPoints ++ " left)")
             ]
 
         , column stdColumn
@@ -155,7 +160,7 @@ sitchRow model =
             ]
         ]
 
-selectionRow : Model -> Element msg
+selectionRow : StatusModel -> Element msg
 selectionRow model =
     row
         [ spacing 30 ]
@@ -204,7 +209,7 @@ movesRow =
         ]
 
 myButtons : String -> Element msg
-myButtons name =
+myButtons thisName =
     el
         [ Border.solid
         , Border.color (rgb255 0 0 0)
@@ -213,22 +218,24 @@ myButtons name =
         , padding 5
         ] (Input.button []
                 { onPress = Nothing
-                , label = text name
+                , label = text thisName
                 }
             )
 
 
 
 -- getNamesS
+
+
+getName : StatusModel -> Int -> String
+getName model index =
+    List.map .name advList --model.advList
+    |> Array.fromList
+    |> Array.get index
+    |> maybeToString
+
 maybeToString : Maybe String -> String
 maybeToString x =
     case x of
         Just y -> y
         Nothing -> "Error!"
-
-getName : Model -> Int -> String
-getName model index =
-    List.map .name model.advList
-    |> Array.fromList
-    |> Array.get index
-    |> maybeToString
