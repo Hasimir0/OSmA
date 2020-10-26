@@ -16,7 +16,7 @@ main : Program () StatusModel Msg
 main =
     Browser.sandbox
         { init = statusModel
-        , update = update
+        , update = updateStatus
         , view = view
         }
 
@@ -63,8 +63,8 @@ type Msg =
 
 
 -- UPDATE
-update : Msg -> StatusModel -> StatusModel
-update msg model = 
+updateStatus : Msg -> StatusModel -> StatusModel
+updateStatus msg model = 
     case msg of
         Navigate ->
             model
@@ -75,13 +75,21 @@ update msg model =
         ActivateAdv ->
             model 
 
+updateAdv : Msg -> AdvList -> AdvList
+updateAdv msg model = 
+    case msg of
+        ActivateAdv ->
+            model
+        _ ->
+            model
+    
 
 
        
 
 
 -- VIEW
-view : StatusModel -> Html msg
+view : StatusModel -> Html Msg
 view model =
     Element.layout
         [ Background.color (rgb255 240 240 240)
@@ -101,15 +109,15 @@ view model =
             ]
         )
 
-menuRow : Element msg
+menuRow : Element Msg
 menuRow =
     row
         [ spacing 10
         , centerX
         ]
-        [ myButtons "Adventurer Sheets"
-        , myButtons "Rules Summary"
-        , myButtons "Save & Exit"
+        [ myButtons Nothing "Adventurer Sheets"
+        , myButtons Nothing "Rules Summary"
+        , myButtons Nothing "Save & Exit"
         ]
 
 
@@ -128,7 +136,7 @@ bulletListBuilder : String -> Element msg
 bulletListBuilder myList =
     el [] ( paragraph [padding 5, spacing 5] [text ("+ " ++ myList) ] )
 
-sitchRow : StatusModel -> Element msg
+sitchRow : StatusModel -> Element Msg
 sitchRow model =
     row
         [ centerX
@@ -146,7 +154,7 @@ sitchRow model =
                 [ text "...but maybe this is not right! Do you want to " ]
             , paragraph
                 []
-                [ myButtons "Get Your Bearings"
+                [ myButtons Nothing "Get Your Bearings"
                 , text " ?"
                 ]
             , text (" (" ++ String.fromInt statusModel.navPoints ++ " left)")
@@ -156,11 +164,11 @@ sitchRow model =
             [ paragraph
                 []
                 [ text "Someone is about to do something" ]
-            , myButtons "Confirm?"
+            , myButtons Nothing "Confirm?"
             ]
         ]
 
-selectionRow : StatusModel -> Element msg
+selectionRow : StatusModel -> Element Msg
 selectionRow model =
     row
         [ spacing 30 ]
@@ -171,9 +179,9 @@ selectionRow model =
             ]
         , column
             [ spacing 30 ]
-            [ myButtons (getName model 0)
-            , myButtons (getName model 1)
-            , myButtons (getName model 2)
+            [ myButtons (Just ActivateAdv) (getName model 0)
+            , myButtons (Just ActivateAdv) (getName model 1)
+            , myButtons (Just ActivateAdv) (getName model 2)
             ]
         ]
 
@@ -208,8 +216,9 @@ movesRow =
             ]
         ]
 
-myButtons : String -> Element msg
-myButtons thisName =
+
+myButtons : (Maybe Msg) -> String -> Element Msg
+myButtons thisMsg thisLabel =
     el
         [ Border.solid
         , Border.color (rgb255 0 0 0)
@@ -217,14 +226,10 @@ myButtons thisName =
         , Border.rounded 10
         , padding 5
         ] (Input.button []
-                { onPress = Nothing
-                , label = text thisName
+                { onPress = thisMsg
+                , label = text thisLabel
                 }
             )
-
-
-
--- getNamesS
 
 
 getName : StatusModel -> Int -> String
