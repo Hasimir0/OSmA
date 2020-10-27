@@ -12,31 +12,22 @@ import Array exposing (Array)
 
 
 -- MAIN
-main : Program () StatusModel Msg
+main : Program () Model Msg
 main =
     Browser.sandbox
-        { init = statusModel
-        , update = updateStatus
+        { init = defaultModel
+        , update = update
         , view = view
         }
 
 
 
 -- MODEL
-type alias StatusModel =
+type alias Model =
     { roundCounter : Int
     , navPoints : Int
     , sitchStatus : List String
-    }
-
-statusModel : StatusModel
-statusModel =
-    { roundCounter = 0
-    , navPoints = 0
-    , sitchStatus =
-        [ "You are in a simple, safe, small space."
-        , "You are temporarily sheltered from whatever was chasing you."
-        ]
+    , advList : List Adventurer
     }
 
 type alias Adventurer =
@@ -45,14 +36,24 @@ type alias Adventurer =
     , isActive : Bool
     }
 
-type alias AdvList = List Adventurer
-
-advList : AdvList
-advList =
+defaultModel : Model
+defaultModel =
+    { roundCounter = 0
+    , navPoints = 0
+    , sitchStatus =
+        [ "You are in a simple, safe, small space."
+        , "You are temporarily sheltered from whatever was chasing you."
+        ]
+    , advList =
         [ { name = "The Nameless One" , canMove = True, isActive = False }
         , { name = "Fake Player" , canMove = True, isActive = False }
         , { name = "Sir Placeholder" , canMove = True, isActive = False }
         ]
+    }
+
+
+
+
 
 type Msg =
     Navigate
@@ -63,8 +64,8 @@ type Msg =
 
 
 -- UPDATE
-updateStatus : Msg -> StatusModel -> StatusModel
-updateStatus msg model = 
+update : Msg -> Model -> Model
+update msg model = 
     case msg of
         Navigate ->
             model
@@ -75,13 +76,8 @@ updateStatus msg model =
         ActivateAdv ->
             model 
 
-updateAdv : Msg -> AdvList -> AdvList
-updateAdv msg model = 
-    case msg of
-        ActivateAdv ->
-            model
-        _ ->
-            model
+
+
     
 
 
@@ -89,7 +85,7 @@ updateAdv msg model =
 
 
 -- VIEW
-view : StatusModel -> Html Msg
+view : Model -> Html Msg
 view model =
     Element.layout
         [ Background.color (rgb255 240 240 240)
@@ -136,7 +132,7 @@ bulletListBuilder : String -> Element msg
 bulletListBuilder myList =
     el [] ( paragraph [padding 5, spacing 5] [text ("+ " ++ myList) ] )
 
-sitchRow : StatusModel -> Element Msg
+sitchRow : Model -> Element Msg
 sitchRow model =
     row
         [ centerX
@@ -145,7 +141,7 @@ sitchRow model =
         , Background.color (rgb255 211 211 211)
         ]
         [ column stdColumn
-            (List.map bulletListBuilder statusModel.sitchStatus)
+            (List.map bulletListBuilder model.sitchStatus)
             
 
         , column stdColumn
@@ -157,7 +153,7 @@ sitchRow model =
                 [ myButtons Nothing "Get Your Bearings"
                 , text " ?"
                 ]
-            , text (" (" ++ String.fromInt statusModel.navPoints ++ " left)")
+            , text (" (" ++ String.fromInt model.navPoints ++ " left)")
             ]
 
         , column stdColumn
@@ -168,7 +164,7 @@ sitchRow model =
             ]
         ]
 
-selectionRow : StatusModel -> Element Msg
+selectionRow : Model -> Element Msg
 selectionRow model =
     row
         [ spacing 30 ]
@@ -232,9 +228,9 @@ myButtons thisMsg thisLabel =
             )
 
 
-getName : StatusModel -> Int -> String
+getName : Model -> Int -> String
 getName model index =
-    List.map .name advList --model.advList
+    List.map .name model.advList
     |> Array.fromList
     |> Array.get index
     |> maybeToString
