@@ -8,6 +8,7 @@ import Element.Font as Font
 import Element.Input as Input
 import Element.Border as Border
 import Array exposing (Array)
+import Html exposing (div)
 
 
 
@@ -28,6 +29,7 @@ type alias Model =
     , navPoints : Int
     , sitchStatus : List String
     , advList : List Adventurer
+    , isActive : Maybe Adventurer
     }
 
 type alias Adventurer =
@@ -49,17 +51,15 @@ defaultModel =
         , { name = "Fake Player" , canMove = True, isActive = False }
         , { name = "Sir Placeholder" , canMove = True, isActive = False }
         ]
+    , isActive = Nothing
     }
 
-
-
-
-
 type Msg =
-    Navigate
-    | Search
-    | SolveProblems
-    | ActivateAdv
+    SetAction String
+    | ActivateAdv Adventurer
+    | MenuAction
+    | Reorient
+    | Confirm
 
 
 
@@ -67,14 +67,22 @@ type Msg =
 update : Msg -> Model -> Model
 update msg model = 
     case msg of
-        Navigate ->
+        SetAction "Navigate" ->
             model
-        Search ->
+        SetAction "Search" ->
             model
-        SolveProblems ->
+        SetAction "SolveProblems" ->
             model
-        ActivateAdv ->
-            model 
+        SetAction _ ->
+            model
+        ActivateAdv adv ->
+            {model | isActive = Just adv}
+        Reorient ->
+            model
+        Confirm ->
+         model
+        MenuAction ->
+            model
 
 
 
@@ -111,9 +119,9 @@ menuRow =
         [ spacing 10
         , centerX
         ]
-        [ myButtons Nothing "Adventurer Sheets"
-        , myButtons Nothing "Rules Summary"
-        , myButtons Nothing "Save & Exit"
+        [ {- myButtons MenuAction "Adventurer Sheets"
+        , myButtons MenuAction "Rules Summary"
+        , myButtons MenuAction "Save & Exit" -}
         ]
 
 
@@ -134,6 +142,10 @@ bulletListBuilder myList =
 
 sitchRow : Model -> Element Msg
 sitchRow model =
+    let
+        activeAdv =
+            Maybe.map .name model.isActive |> Maybe.withDefault "Someone"
+    in
     row
         [ centerX
         , padding 10
@@ -143,14 +155,13 @@ sitchRow model =
         [ column stdColumn
             (List.map bulletListBuilder model.sitchStatus)
             
-
         , column stdColumn
             [ paragraph
                 [spacing 5]
                 [ text "...but maybe this is not right! Do you want to " ]
             , paragraph
                 []
-                [ myButtons Nothing "Get Your Bearings"
+                [ myButtons Reorient "Get Your Bearings"
                 , text " ?"
                 ]
             , text (" (" ++ String.fromInt model.navPoints ++ " left)")
@@ -159,8 +170,8 @@ sitchRow model =
         , column stdColumn
             [ paragraph
                 []
-                [ text "Someone is about to do something" ]
-            , myButtons Nothing "Confirm?"
+                [ text (activeAdv ++ " is about to do something") ]
+            , myButtons Confirm "Confirm?"
             ]
         ]
 
@@ -175,11 +186,13 @@ selectionRow model =
             ]
         , column
             [ spacing 30 ]
-            [ myButtons (Just ActivateAdv) (getName model 0)
-            , myButtons (Just ActivateAdv) (getName model 1)
-            , myButtons (Just ActivateAdv) (getName model 2)
-            ]
+            (List.map advButtons model.advList)
         ]
+
+
+
+
+    --|> myButtons (Just ActivateAdv "test") (name)
 
 
 movesRow : Element msg
@@ -213,19 +226,40 @@ movesRow =
         ]
 
 
-myButtons : (Maybe Msg) -> String -> Element Msg
-myButtons thisMsg thisLabel =
+advButtons : Adventurer -> Element Msg
+advButtons adv =
     el
         [ Border.solid
         , Border.color (rgb255 0 0 0)
         , Border.width 1
         , Border.rounded 10
         , padding 5
-        ] (Input.button []
-                { onPress = thisMsg
-                , label = text thisLabel
-                }
-            )
+        ]
+        (Input.button []
+            { onPress = Just <| ActivateAdv adv
+            , label = text adv.name
+            }
+        )
+
+
+myButtons : Msg -> String -> Element Msg
+myButtons msg label =
+    el
+        [ Border.solid
+        , Border.color (rgb255 0 0 0)
+        , Border.width 1
+        , Border.rounded 10
+        , padding 5
+        ]
+        (Input.button []
+            { onPress = Just msg
+            , label = text label
+            }
+        )
+
+getAdvNames : Model -> List String
+getAdvNames model  =
+    List.map .name model.advList
 
 
 getName : Model -> Int -> String
