@@ -16,7 +16,7 @@ import Html exposing (div)
 main : Program () Model Msg
 main =
     Browser.sandbox
-        { init = defaultModel
+        { init = init
         , update = update
         , view = view
         }
@@ -29,24 +29,27 @@ type alias Model =
     , navPoints : Int
     , sitchStatus : List String
     , advList : List Adventurer
-    , isActive : Maybe Adventurer
+    , movesList : List Move
+    , activeAdv : Maybe Adventurer
+    , activeMove : String -- default or click value
     }
 
 type alias Adventurer =
     { name : String
     , canMove : Bool
-    , isActive : Bool
+    , activeAdv : Bool
     }
 
 type alias Move =
-    { group : String
+    { name : String
+    , group : String
     , trigger : String
     , playerTasks : List String
     , gameTasks : List String
     }
 
-defaultModel : Model
-defaultModel =
+init : Model
+init =
     { roundCounter = 0
     , navPoints = 0
     , sitchStatus =
@@ -54,19 +57,40 @@ defaultModel =
         , "You are temporarily sheltered from whatever was chasing you."
         ]
     , advList =
-        [ { name = "The Nameless One" , canMove = True, isActive = False }
-        , { name = "Fake Player" , canMove = True, isActive = False }
-        , { name = "Sir Placeholder" , canMove = True, isActive = False }
+        [ { name = "The Nameless One" , canMove = True, activeAdv = False }
+        , { name = "Fake Player" , canMove = True, activeAdv = False }
+        , { name = "Sir Placeholder" , canMove = True, activeAdv = False }
         ]
-    , isActive = Nothing
+    , movesList = [
+    { name = "some name"
+    , group = "some group"
+    , trigger = "some text"
+    , playerTasks = ["do this", "do that"]
+    , gameTasks = ["some task", "some other task"]
     }
+    ]
+    , activeAdv = Nothing
+    , activeMove = "something"
+    }
+
+
+
+
+
+
+
+
 
 type Msg =
     SetAction String
     | ActivateAdv Adventurer
+   -- | ActivateMove Move
     | MenuAction
     | Reorient
     | Confirm
+    | Orientate
+    | DelveAhead
+    | GoWatchfully
 
 
 
@@ -90,12 +114,20 @@ update msg model =
         SetAction _ ->
             model
         ActivateAdv adv ->
-            {model | isActive = Just adv}
+            {model | activeAdv = Just adv}
+        {- ActivateMove move ->
+            {model | activeMove = Just move} -}
         Reorient ->
             model
         Confirm ->
          model
         MenuAction ->
+            model
+        Orientate ->
+            {model | activeMove = "Orientate"}
+        DelveAhead ->
+            model
+        GoWatchfully ->
             model
 
 
@@ -125,7 +157,7 @@ view model =
                 [ menuRow
                 , promptRow
                 , selectionRow model
-                , movesRow
+                , movesRow model
                 ]
             , column
                 [ centerX
@@ -198,8 +230,8 @@ selectionRow model =
 
 
 
-movesRow : Element msg
-movesRow =
+movesRow : Model -> Element Msg
+movesRow model =
     column
         []
         [ paragraph
@@ -219,22 +251,25 @@ movesRow =
                     , Font.bold
                     , padding 10] (text "NAVIGATE" )
 
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [text "Get Your Bearings"]
+                , paragraph ( stdColumn ++ 
+                    [ Font.bold
+                    , Font.italic ] )
+                    [ myButtons Orientate "Orientate"
+                    ]
                 , paragraph stdColumn
                     [ text "When you spend time consulting your maps and making sense of the area’s layout..."]
                 
                 , text ""
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [text "Delve Ahead"]
+                    [myButtons DelveAhead "Delve Ahead"]
                 , paragraph stdColumn
                     [ text "When you step into a new section hastily, carelessly or blindly..." ]
                 
                 , text ""
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [text "Go Watchfully"]
+                    [myButtons GoWatchfully "Go Watchfully"]
                 , paragraph stdColumn
                     [ text "When you step into a new section slowly and carefully..." ]
                 
@@ -291,7 +326,6 @@ movesRow =
                     [text "Fight!"]
                 , paragraph stdColumn
                     [ text "When you fight a dangerous opponent..." ]
-                
                 ]
             ]
         ]
@@ -309,7 +343,9 @@ sitchRow : Model -> Element Msg
 sitchRow model =
     let
         activeAdv =
-            Maybe.map .name model.isActive |> Maybe.withDefault "Someone"
+            Maybe.map .name model.activeAdv |> Maybe.withDefault "Someone"
+        activeMove =
+            text (model.activeMove)
     in
     row
         [ centerX
@@ -335,7 +371,7 @@ sitchRow model =
         , column (stdColumn ++ [width (fillPortion 1) ] )
             [ paragraph
                 []
-                [ text (activeAdv ++ " is about to do something") ]
+                [ text (activeAdv ++ " is about to do " ++ model.activeMove) ]
             , myButtons Confirm "Confirm?"
             ]
         ]
@@ -359,6 +395,21 @@ advButtons adv =
         )
 
 
+{- moveButtons : Move -> Element Msg
+moveButtons move =
+    el
+        [ Border.solid
+        , Border.color (rgb255 0 0 0)
+        , Border.width 1
+        , Border.rounded 10
+        , padding 5
+        ]
+        (Input.button []
+            { onPress = Just <| ActivateMove move
+            , label = text move.name
+            }
+        ) -}
+
 
 myButtons : Msg -> String -> Element Msg
 myButtons msg label =
@@ -368,6 +419,7 @@ myButtons msg label =
         , Border.width 1
         , Border.rounded 10
         , padding 5
+        , centerX
         ]
         (Input.button []
             { onPress = Just msg
