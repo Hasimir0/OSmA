@@ -38,6 +38,13 @@ type alias Adventurer =
     , isActive : Bool
     }
 
+type alias Move =
+    { group : String
+    , trigger : String
+    , playerTasks : List String
+    , gameTasks : List String
+    }
+
 defaultModel : Model
 defaultModel =
     { roundCounter = 0
@@ -60,6 +67,13 @@ type Msg =
     | MenuAction
     | Reorient
     | Confirm
+
+
+
+
+
+
+
 
 
 
@@ -86,6 +100,7 @@ update msg model =
 
 
 
+
     
 
 
@@ -96,33 +111,37 @@ update msg model =
 view : Model -> Html Msg
 view model =
     Element.layout
-        [ Background.color (rgb255 240 240 240)
+        [ Background.color (rgb255 220 220 220)
         ]
-        ( column
-            [ centerX
-            , Border.color (rgb255 0 0 0)
-            , Border.width 1
-            , padding 10
-            , spacing 30
-            , width (px 800)
-            ]
-            [ menuRow
-            , sitchRow model
-            , selectionRow model
-            , movesRow
+        ( row [centerX]
+            [ column
+                [ centerX
+                , Border.color (rgb255 0 0 0)
+                , Border.width 1
+                , padding 10
+                , spacing 30
+                , width (px 800)
+                ]
+                [ menuRow
+                , promptRow
+                , selectionRow model
+                , movesRow
+                ]
+            , column
+                [ centerX
+                , Border.color (rgb255 0 0 0)
+                , Border.width 1
+                , padding 10
+                , spacing 30
+                , width (px 800)
+                , height fill
+                ]
+                [ text ("This is Round " ++ (String.fromInt model.roundCounter) )
+                , sitchRow model
+                ]
             ]
         )
 
-menuRow : Element Msg
-menuRow =
-    row
-        [ spacing 10
-        , centerX
-        ]
-        [ {- myButtons MenuAction "Adventurer Sheets"
-        , myButtons MenuAction "Rules Summary"
-        , myButtons MenuAction "Save & Exit" -}
-        ]
 
 
 stdColumn : List (Attribute msg)
@@ -134,11 +153,157 @@ stdColumn  =
     , height fill
     , Font.justify
     ]
-            
+
+
+menuRow : Element Msg
+menuRow =
+    row
+        [ spacing 10
+        , centerX
+        ]
+        [ myButtons MenuAction "Adventurer Sheets"
+        , myButtons MenuAction "Rules Summary"
+        , myButtons MenuAction "Save & Exit"
+        ]
+
+
+promptRow : Element msg
+promptRow =
+    row
+        []
+        [ paragraph
+            []
+            [ el [Font.bold] (text "1. ")
+            , text "Freely describe what your Adventurer is doing. When this description matches a Move, do the Move." ]
+        ]
+
+
+selectionRow : Model -> Element Msg
+selectionRow model =
+    row
+        [ width fill, spacing 30 ]
+        [ column
+            [ width (fillPortion 1), height fill]
+            [ paragraph
+                []
+                [ el [Font.bold] (text "2. ")
+                , text "Who is making a Move?"
+                ]
+            , el [Font.italic, centerX] (text "(select just one)")
+            ]
+        , column
+            [ width (fillPortion 2), spacing 15 ]
+            (List.map advButtons model.advList)
+        ]
+
+
+
+movesRow : Element msg
+movesRow =
+    column
+        []
+        [ paragraph
+                    []
+                    [ el [Font.bold] (text "3. ")
+                    , text "Which Move is being made?"]
+    
+        , row
+            [ padding 10
+            , spacing 30
+            , width fill
+            --, Background.color (rgb255 211 211 211)
+            ]
+            [ column [width (fillPortion 1)]
+                [ el
+                    [centerX
+                    , Font.bold
+                    , padding 10] (text "NAVIGATE" )
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [text "Get Your Bearings"]
+                , paragraph stdColumn
+                    [ text "When you spend time consulting your maps and making sense of the area’s layout..."]
+                
+                , text ""
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [text "Delve Ahead"]
+                , paragraph stdColumn
+                    [ text "When you step into a new section hastily, carelessly or blindly..." ]
+                
+                , text ""
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [text "Go Watchfully"]
+                , paragraph stdColumn
+                    [ text "When you step into a new section slowly and carefully..." ]
+                
+                ]
+
+            , column [width (fillPortion 1)]
+                [ el
+                    [centerX
+                    , Font.bold
+                    , padding 10] (text "SEARCH" )
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [text "Search and Scavenge"]
+                , paragraph stdColumn
+                    [ text "When you spend time looking around to find something you need..."]
+                
+                , text ""
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [text "Prod"]
+                , paragraph stdColumn
+                    [ text "When you manipulate or get very close to something specific in the current segment..." ]
+                
+                , text ""
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [text "Inspect"]
+                , paragraph stdColumn
+                    [ text "When you investigate something specific within the current segment with great caution or from a moderate distance..." ]
+                
+                ]
+
+            , column [width (fillPortion 1)]
+                [ el
+                    [centerX
+                    , Font.bold
+                    , padding 10] (text "OVEWRCOME" )
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [text "Take a Risk"]
+                , paragraph stdColumn
+                    [ text "When you try to overcome an obstacle with your own direct actions..."]
+                
+                , text ""
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [text "Use Ingenuity"]
+                , paragraph stdColumn
+                    [ text "When you try to build, repair, craft or produce a thing..." ]
+                
+                , text ""
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [text "Fight!"]
+                , paragraph stdColumn
+                    [ text "When you fight a dangerous opponent..." ]
+                
+                ]
+            ]
+        ]
+
+
+
 
 bulletListBuilder : String -> Element msg
 bulletListBuilder myList =
     el [] ( paragraph [padding 5, spacing 5] [text ("+ " ++ myList) ] )
+
+
 
 sitchRow : Model -> Element Msg
 sitchRow model =
@@ -152,10 +317,10 @@ sitchRow model =
         , spacing 30
         , Background.color (rgb255 211 211 211)
         ]
-        [ column stdColumn
+        [ column (stdColumn ++ [width (fillPortion 2) ] )
             (List.map bulletListBuilder model.sitchStatus)
             
-        , column stdColumn
+        {- , column stdColumn
             [ paragraph
                 [spacing 5]
                 [ text "...but maybe this is not right! Do you want to " ]
@@ -165,9 +330,9 @@ sitchRow model =
                 , text " ?"
                 ]
             , text (" (" ++ String.fromInt model.navPoints ++ " left)")
-            ]
-
-        , column stdColumn
+            ] -}
+                
+        , column (stdColumn ++ [width (fillPortion 1) ] )
             [ paragraph
                 []
                 [ text (activeAdv ++ " is about to do something") ]
@@ -175,55 +340,7 @@ sitchRow model =
             ]
         ]
 
-selectionRow : Model -> Element Msg
-selectionRow model =
-    row
-        [ spacing 30 ]
-        [ column
-            []
-            [ text ("This is Round " ++ (String.fromInt model.roundCounter) )
-            , text "Who will make the next Move?"
-            ]
-        , column
-            [ spacing 30 ]
-            (List.map advButtons model.advList)
-        ]
 
-
-
-
-    --|> myButtons (Just ActivateAdv "test") (name)
-
-
-movesRow : Element msg
-movesRow =
-    row
-        [ padding 10
-        , spacing 30
-        , width fill
-        , Background.color (rgb255 211 211 211)
-        ]
-        [ column stdColumn
-            [ text "NAVIGATE"
-            , text "Get Your Bearings"
-            , text "Delve Ahead"
-            , text "Go Watchfully"
-            ]
-
-        , column stdColumn
-            [ text "SEARCH"
-            , text "Scavange"
-            , text "Prod"
-            , text "Inspect"
-            ]
-
-        , column stdColumn
-            [ text "OVERCOME"
-            , text "Take a Risk"
-            , text "Use Ingenuity"
-            , text "Fight!"
-            ]
-        ]
 
 
 advButtons : Adventurer -> Element Msg
@@ -242,6 +359,7 @@ advButtons adv =
         )
 
 
+
 myButtons : Msg -> String -> Element Msg
 myButtons msg label =
     el
@@ -256,6 +374,8 @@ myButtons msg label =
             , label = text label
             }
         )
+
+
 
 getAdvNames : Model -> List String
 getAdvNames model  =
