@@ -9,6 +9,7 @@ import Element.Input as Input
 import Element.Border as Border
 import Array exposing (Array)
 import Html exposing (div)
+import Maybe exposing (Maybe)
 
 
 
@@ -48,6 +49,10 @@ type alias Move =
     , gameTasks : List String
     }
 
+
+
+
+
 init : Model
 init =
     { roundCounter = 0
@@ -57,7 +62,7 @@ init =
         , "You are temporarily sheltered from whatever was chasing you."
         ]
     , advList =
-        [ { name = "The Nameless One" , canMove = True, activeAdv = False }
+        [ { name = "The Nameless One" , canMove = False, activeAdv = False }
         , { name = "Fake Player" , canMove = True, activeAdv = False }
         , { name = "Sir Placeholder" , canMove = True, activeAdv = False }
         ]
@@ -113,11 +118,23 @@ update msg model =
         SetAction _ ->
             model
         ActivateAdv adv ->
-            {model | activeAdv = Just adv}
+            if adv.canMove == True
+            then {model | activeAdv = Just adv}
+            else {model | activeAdv = Nothing}
         Reorient ->
             model
         Confirm ->
-         model
+            if Maybe.map .canMove model.activeAdv == Just False
+            then model
+            else {model | navPoints = model.navPoints +1}
+            {- if playerPrompt == ""
+            then playerPrompt = "stuff done!" -}
+            {-the adventurer canMove = False
+            , game tasks -> sitch prompt
+            , reset activeAdv & activeMove
+            , check turn end
+             -}
+             
         MenuAction ->
             model
         Orientate ->
@@ -139,9 +156,16 @@ update msg model =
 -- VIEW
 view : Model -> Html Msg
 view model =
-    Element.layout
-        [ Background.color (rgb255 220 220 220)
-        ]
+    Element.layout{- With
+        { options =
+            [ focusStyle 
+                { borderColor = Just (rgb255 0 255 0)
+                , backgroundColor = Just (rgb255 0 255 0)
+                , shadow = Nothing
+                }
+            ]
+        } -}
+        [ Background.color (rgb255 220 220 220) ]
         ( row [centerX]
             [ column
                 [ centerX
@@ -166,6 +190,7 @@ view model =
                 , height fill
                 ]
                 [ text ("This is Round " ++ (String.fromInt model.roundCounter) )
+                , text ("You have " ++ (String.fromInt model.navPoints) ++ " Navigation points." )
                 , sitchRow model
                 ]
             ]
@@ -367,14 +392,21 @@ sitchRow model =
 
 playerPrompt : Model -> String
 playerPrompt model = 
-    if (model.activeAdv == Nothing) && (model.activeMove == "do something")
+    if model.activeAdv == Nothing && model.activeMove == "do something"
     then "Select an Adventurer and a Move."
-    else if (model.activeAdv == Nothing)
+    else if model.activeAdv == Nothing
     then "Select an Adventurer."
-    else if (model.activeMove == "do something")
-    then "Select a Move."
+    else if model.activeMove == "do something"
+    then if (Maybe.map .canMove model.activeAdv == Just True)
+        then "Select a Move."
+        else "Select a DIFFERENT Adventurer!"
     else ""
-     
+    
+{-  Aempty & Mempty
+    Aempty
+    Mempty
+        Adv.canMove True = 
+     -}
 
 
 
@@ -386,6 +418,7 @@ advButtons adv =
         , Border.width 1
         , Border.rounded 10
         , padding 5
+        , mouseOver [ Background.color (rgb255 0 255 0) ]
         ]
         (Input.button []
             { onPress = Just <| ActivateAdv adv
@@ -406,6 +439,7 @@ myButtons msg label =
         , Border.rounded 10
         , padding 5
         , centerX
+        , mouseOver [ Background.color (rgb255 0 255 0) ]
         ]
         (Input.button []
             { onPress = Just msg
