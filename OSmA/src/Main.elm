@@ -70,7 +70,7 @@ init =
     }
     ]
     , activeAdv = Nothing
-    , activeMove = "something"
+    , activeMove = "do something"
     }
 
 
@@ -84,7 +84,6 @@ init =
 type Msg =
     SetAction String
     | ActivateAdv Adventurer
-   -- | ActivateMove Move
     | MenuAction
     | Reorient
     | Confirm
@@ -115,8 +114,6 @@ update msg model =
             model
         ActivateAdv adv ->
             {model | activeAdv = Just adv}
-        {- ActivateMove move ->
-            {model | activeMove = Just move} -}
         Reorient ->
             model
         Confirm ->
@@ -126,9 +123,9 @@ update msg model =
         Orientate ->
             {model | activeMove = "Orientate"}
         DelveAhead ->
-            model
+            {model | activeMove = "Delve Ahead"}
         GoWatchfully ->
-            model
+            {model | activeMove = "Go Watchfully"}
 
 
 
@@ -355,27 +352,29 @@ sitchRow model =
         ]
         [ column (stdColumn ++ [width (fillPortion 2) ] )
             (List.map bulletListBuilder model.sitchStatus)
-            
-        {- , column stdColumn
-            [ paragraph
-                [spacing 5]
-                [ text "...but maybe this is not right! Do you want to " ]
-            , paragraph
-                []
-                [ myButtons Reorient "Get Your Bearings"
-                , text " ?"
-                ]
-            , text (" (" ++ String.fromInt model.navPoints ++ " left)")
-            ] -}
-                
+        
         , column (stdColumn ++ [width (fillPortion 1) ] )
             [ paragraph
                 []
-                [ text (activeAdv ++ " is about to do " ++ model.activeMove) ]
+                [ text (activeAdv ++ " is about to " ++ model.activeMove ++ ".") ]
+            , el [] (text "")
+            , paragraph
+                []
+                [ text (playerPrompt model) ]
             , myButtons Confirm "Confirm?"
             ]
         ]
 
+playerPrompt : Model -> String
+playerPrompt model = 
+    if (model.activeAdv == Nothing) && (model.activeMove == "do something")
+    then "Select an Adventurer and a Move."
+    else if (model.activeAdv == Nothing)
+    then "Select an Adventurer."
+    else if (model.activeMove == "do something")
+    then "Select a Move."
+    else ""
+     
 
 
 
@@ -395,20 +394,7 @@ advButtons adv =
         )
 
 
-{- moveButtons : Move -> Element Msg
-moveButtons move =
-    el
-        [ Border.solid
-        , Border.color (rgb255 0 0 0)
-        , Border.width 1
-        , Border.rounded 10
-        , padding 5
-        ]
-        (Input.button []
-            { onPress = Just <| ActivateMove move
-            , label = text move.name
-            }
-        ) -}
+
 
 
 myButtons : Msg -> String -> Element Msg
@@ -446,3 +432,23 @@ maybeToString x =
     case x of
         Just y -> y
         Nothing -> "Error!"
+
+
+
+
+
+
+
+
+
+        {- , column stdColumn
+            [ paragraph
+                [spacing 5]
+                [ text "...but maybe this is not right! Do you want to " ]
+            , paragraph
+                []
+                [ myButtons Reorient "Get Your Bearings"
+                , text " ?"
+                ]
+            , text (" (" ++ String.fromInt model.navPoints ++ " left)")
+            ] -}
