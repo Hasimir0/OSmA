@@ -120,7 +120,8 @@ update msg model =
         ActivateAdv adv ->
             if adv.canMove == True
             then {model | activeAdv = Just adv}
-            else {model | activeAdv = Nothing}
+            else {model | activeAdv = Nothing} 
+                
         Reorient ->
             model
         Confirm ->
@@ -360,7 +361,6 @@ bulletListBuilder myList =
     el [] ( paragraph [padding 5, spacing 5] [text ("+ " ++ myList) ] )
 
 
-
 sitchRow : Model -> Element Msg
 sitchRow model =
     let
@@ -394,12 +394,15 @@ playerPrompt : Model -> String
 playerPrompt model = 
     if model.activeAdv == Nothing && model.activeMove == "do something"
     then "Select an Adventurer and a Move."
+    
     else if model.activeAdv == Nothing
     then "Select an Adventurer."
+    
     else if model.activeMove == "do something"
     then if (Maybe.map .canMove model.activeAdv == Just True)
         then "Select a Move."
         else "Select a DIFFERENT Adventurer!"
+    
     else ""
     
 {-  Aempty & Mempty
@@ -418,7 +421,8 @@ advButtons adv =
         , Border.width 1
         , Border.rounded 10
         , padding 5
-        , mouseOver [ Background.color (rgb255 0 255 0) ]
+        --, mouseOver [ Background.color (rgb255 0 255 0) ]
+        , advButtonOverColor adv
         ]
         (Input.button []
             { onPress = Just <| ActivateAdv adv
@@ -427,6 +431,11 @@ advButtons adv =
         )
 
 
+advButtonOverColor : Adventurer -> Attribute msg
+advButtonOverColor adv =
+    if adv.canMove == False
+    then mouseOver [ Background.color (rgb255 255 0 0) ]
+    else mouseOver [ Background.color (rgb255 0 255 0) ]
 
 
 
