@@ -30,9 +30,9 @@ type alias Model =
     , navPoints : Int
     , sitchStatus : List String
     , advList : List Adventurer
-    , movesList : List Move
+    --, movesList : List Move
     , activeAdv : Maybe Adventurer
-    , activeMove : String -- default or click value
+    , activeMove : (Maybe Move, String)
     }
 
 type alias Adventurer =
@@ -41,14 +41,17 @@ type alias Adventurer =
     , activeAdv : Bool
     }
 
-type alias Move =
+{- type alias Move =
     { name : String
-    , group : String
-    , trigger : String
+    , moveMessage : Msg
     , playerTasks : List String
     , gameTasks : List String
-    }
+    } -}
 
+type Move
+    = Orientate
+    | DelveAhead
+    | GoWatchfully
 
 
 
@@ -66,20 +69,20 @@ init =
         , { name = "Fake Player" , canMove = True, activeAdv = False }
         , { name = "Sir Placeholder" , canMove = True, activeAdv = False }
         ]
-    , movesList = [
-    { name = "some name"
-    , group = "some group"
-    , trigger = "some text"
-    , playerTasks = ["do this", "do that"]
-    , gameTasks = ["some task", "some other task"]
-    }
-    ]
+    {- , movesList =
+        [ { name = "Orientate", moveMessage = Orientate, playerTasks = ["List String"], gameTasks = ["List String"] }
+        ] -}
     , activeAdv = Nothing
-    , activeMove = "do something"
+    , activeMove = (Nothing, "do something")
     }
 
 
-
+{- movesList : List Move
+movesList =
+        [ { name = "Orientate", moveMessage = Orientate, playerTasks = ["List String"], gameTasks = ["List String"] }
+        , { name = "Delve Ahead", moveMessage = DelveAhead, playerTasks = ["List String"], gameTasks = ["List String"] }
+        , { name = "Go Watchfully", moveMessage = GoWatchfully, playerTasks = ["List String"], gameTasks = ["List String"] }
+        ] -}
 
 
 
@@ -91,10 +94,11 @@ type Msg =
     | ActivateAdv Adventurer
     | MenuAction
     | Reorient
-    | Confirm
-    | Orientate
+    | Confirm 
+    {- | Orientate
     | DelveAhead
-    | GoWatchfully
+    | GoWatchfully -}
+    | SetMove (Move, String)
 
 
 
@@ -124,10 +128,14 @@ update msg model =
                 
         Reorient ->
             model
-        Confirm ->
+        Confirm  ->
             if Maybe.map .canMove model.activeAdv == Just False
             then model
-            else {model | navPoints = model.navPoints +1}
+            else model {- {model | navPoints = model.navPoints
+                , activeAdv | canMove = False
+                , activeAdv = Nothing
+                , activeMove = "do something"
+                } -}
             {- if playerPrompt == ""
             then playerPrompt = "stuff done!" -}
             {-the adventurer canMove = False
@@ -138,12 +146,21 @@ update msg model =
              
         MenuAction ->
             model
-        Orientate ->
-            {model | activeMove = "Orientate"}
+
+        SetMove (move, name) ->
+            {model | activeMove = (Just move, name)}
+
+{-         Orientate ->
+            {model | activeMove = Maybe.map .messageMove }
         DelveAhead ->
             {model | activeMove = "Delve Ahead"}
         GoWatchfully ->
             {model | activeMove = "Go Watchfully"}
+-}
+            {- let
+                newMove =
+                    List.map .name model.movesList == newMove
+            then {model | activeMove = Maybe.map .name    } -}
 
 
 
@@ -157,15 +174,7 @@ update msg model =
 -- VIEW
 view : Model -> Html Msg
 view model =
-    Element.layout{- With
-        { options =
-            [ focusStyle 
-                { borderColor = Just (rgb255 0 255 0)
-                , backgroundColor = Just (rgb255 0 255 0)
-                , shadow = Nothing
-                }
-            ]
-        } -}
+    Element.layout
         [ Background.color (rgb255 220 220 220) ]
         ( row [centerX]
             [ column
@@ -216,9 +225,9 @@ menuRow =
         [ spacing 10
         , centerX
         ]
-        [ myButtons MenuAction "Adventurer Sheets"
-        , myButtons MenuAction "Rules Summary"
-        , myButtons MenuAction "Save & Exit"
+        [ otherButtons MenuAction "Adventurer Sheets"
+        , otherButtons MenuAction "Rules Summary"
+        , otherButtons MenuAction "Save & Exit"
         ]
 
 
@@ -277,7 +286,7 @@ movesRow model =
                 , paragraph ( stdColumn ++ 
                     [ Font.bold
                     , Font.italic ] )
-                    [ myButtons Orientate "Orientate"
+                    [ moveButtons (Orientate, "Orientate")
                     ]
                 , paragraph stdColumn
                     [ text "When you spend time consulting your maps and making sense of the area’s layout..."]
@@ -285,14 +294,14 @@ movesRow model =
                 , text ""
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [myButtons DelveAhead "Delve Ahead"]
+                    [moveButtons (DelveAhead, "Delve Ahead")]
                 , paragraph stdColumn
                     [ text "When you step into a new section hastily, carelessly or blindly..." ]
                 
                 , text ""
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [myButtons GoWatchfully "Go Watchfully"]
+                    [moveButtons (GoWatchfully, "Go Watchfully")]
                 , paragraph stdColumn
                     [ text "When you step into a new section slowly and carefully..." ]
                 
@@ -367,7 +376,7 @@ sitchRow model =
         activeAdv =
             Maybe.map .name model.activeAdv |> Maybe.withDefault "Someone"
         activeMove =
-            text (model.activeMove)
+            Tuple.second model.activeMove
     in
     row
         [ centerX
@@ -381,35 +390,30 @@ sitchRow model =
         , column (stdColumn ++ [width (fillPortion 1) ] )
             [ paragraph
                 []
-                [ text (activeAdv ++ " is about to " ++ model.activeMove ++ ".") ]
+                [ text (activeAdv ++ " is about to " ++ activeMove ++ ".") ]
             , el [] (text "")
             , paragraph
                 []
                 [ text (playerPrompt model) ]
-            , myButtons Confirm "Confirm?"
+            , otherButtons Confirm "Confirm?"
             ]
         ]
 
 playerPrompt : Model -> String
 playerPrompt model = 
-    if model.activeAdv == Nothing && model.activeMove == "do something"
+    if model.activeAdv == Nothing && model.activeMove == (Nothing, "do something")
     then "Select an Adventurer and a Move."
     
     else if model.activeAdv == Nothing
     then "Select an Adventurer."
     
-    else if model.activeMove == "do something"
+    else if model.activeMove == (Nothing,"do something")
     then if (Maybe.map .canMove model.activeAdv == Just True)
         then "Select a Move."
         else "Select a DIFFERENT Adventurer!"
     
     else ""
-    
-{-  Aempty & Mempty
-    Aempty
-    Mempty
-        Adv.canMove True = 
-     -}
+
 
 
 
@@ -421,7 +425,6 @@ advButtons adv =
         , Border.width 1
         , Border.rounded 10
         , padding 5
-        --, mouseOver [ Background.color (rgb255 0 255 0) ]
         , advButtonOverColor adv
         ]
         (Input.button []
@@ -439,8 +442,27 @@ advButtonOverColor adv =
 
 
 
-myButtons : Msg -> String -> Element Msg
-myButtons msg label =
+
+
+moveButtons : (Move, String) -> Element Msg
+moveButtons (move, label) =
+    el
+        [ Border.solid
+        , Border.color (rgb255 0 0 0)
+        , Border.width 1
+        , Border.rounded 10
+        , padding 5
+        , centerX
+        , mouseOver [ Background.color (rgb255 0 255 0) ]
+        ]
+        (Input.button []
+            { onPress = Just (SetMove (move, label) )
+            , label = text label
+            }
+        )
+
+otherButtons : Msg -> String -> Element Msg
+otherButtons msg name =
     el
         [ Border.solid
         , Border.color (rgb255 0 0 0)
@@ -452,10 +474,9 @@ myButtons msg label =
         ]
         (Input.button []
             { onPress = Just msg
-            , label = text label
+            , label = text name
             }
         )
-
 
 
 getAdvNames : Model -> List String
