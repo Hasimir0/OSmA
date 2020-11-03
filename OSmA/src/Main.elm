@@ -30,7 +30,6 @@ type alias Model =
     , navPoints : Int
     , sitchStatus : List String
     , advList : List Adventurer
-    --, movesList : List Move
     , activeAdv : Maybe Adventurer
     , activeMove : (Maybe Move, String)
     }
@@ -41,12 +40,6 @@ type alias Adventurer =
     , activeAdv : Bool
     }
 
-{- type alias Move =
-    { name : String
-    , moveMessage : Msg
-    , playerTasks : List String
-    , gameTasks : List String
-    } -}
 
 type Move
     = Orientate
@@ -69,20 +62,12 @@ init =
         , { name = "Fake Player" , canMove = True, activeAdv = False }
         , { name = "Sir Placeholder" , canMove = True, activeAdv = False }
         ]
-    {- , movesList =
-        [ { name = "Orientate", moveMessage = Orientate, playerTasks = ["List String"], gameTasks = ["List String"] }
-        ] -}
     , activeAdv = Nothing
     , activeMove = (Nothing, "do something")
     }
 
 
-{- movesList : List Move
-movesList =
-        [ { name = "Orientate", moveMessage = Orientate, playerTasks = ["List String"], gameTasks = ["List String"] }
-        , { name = "Delve Ahead", moveMessage = DelveAhead, playerTasks = ["List String"], gameTasks = ["List String"] }
-        , { name = "Go Watchfully", moveMessage = GoWatchfully, playerTasks = ["List String"], gameTasks = ["List String"] }
-        ] -}
+
 
 
 
@@ -94,10 +79,7 @@ type Msg =
     | ActivateAdv Adventurer
     | MenuAction
     | Reorient
-    | Confirm 
-    {- | Orientate
-    | DelveAhead
-    | GoWatchfully -}
+    | Confirm
     | SetMove (Move, String)
 
 
@@ -131,37 +113,26 @@ update msg model =
         Confirm  ->
             if Maybe.map .canMove model.activeAdv == Just False
             then model
-            else model {- {model | navPoints = model.navPoints
-                , activeAdv | canMove = False
-                , activeAdv = Nothing
-                , activeMove = "do something"
-                } -}
-            {- if playerPrompt == ""
-            then playerPrompt = "stuff done!" -}
-            {-the adventurer canMove = False
-            , game tasks -> sitch prompt
-            , reset activeAdv & activeMove
-            , check turn end
-             -}
-             
+            else
+                case Tuple.first model.activeMove of
+                    Just Orientate ->
+                        {model | navPoints = model.navPoints +1
+                            , activeAdv = init.activeAdv
+                            , activeMove = init.activeMove
+                        }
+                    Just DelveAhead ->
+                        {model | navPoints = model.navPoints +1 }
+                    Just GoWatchfully ->
+                        {model | navPoints = model.navPoints +1 }
+                    Nothing ->
+                        model
+  
+
         MenuAction ->
             model
 
         SetMove (move, name) ->
             {model | activeMove = (Just move, name)}
-
-{-         Orientate ->
-            {model | activeMove = Maybe.map .messageMove }
-        DelveAhead ->
-            {model | activeMove = "Delve Ahead"}
-        GoWatchfully ->
-            {model | activeMove = "Go Watchfully"}
--}
-            {- let
-                newMove =
-                    List.map .name model.movesList == newMove
-            then {model | activeMove = Maybe.map .name    } -}
-
 
 
 
@@ -505,14 +476,4 @@ maybeToString x =
 
 
 
-        {- , column stdColumn
-            [ paragraph
-                [spacing 5]
-                [ text "...but maybe this is not right! Do you want to " ]
-            , paragraph
-                []
-                [ myButtons Reorient "Get Your Bearings"
-                , text " ?"
-                ]
-            , text (" (" ++ String.fromInt model.navPoints ++ " left)")
-            ] -}
+      
