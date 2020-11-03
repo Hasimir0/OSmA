@@ -111,7 +111,7 @@ update msg model =
             model
 
         Confirm  ->
-            if Maybe.map .canMove model.activeAdv == Just False
+            if model.activeAdv == Nothing
             then model
             else
                 let
@@ -362,41 +362,69 @@ sitchRow model =
         , column (stdColumn ++ [width (fillPortion 1) ] )
             [ paragraph
                 []
-                [ text (activeAdv ++ " is about to " ++ activeMove ++ ".") ]
+                [ el [Font.bold] (text activeAdv)
+                , text ( " is about to ")
+                , el [Font.bold] (text activeMove)
+                , text ( "." )
+                ]
             , el [] (text "")
-            , paragraph
+            , column
                 []
-                [ text (playerPrompt model) ]
-            , otherButtons Confirm "Confirm?"
+                (playerPrompt model)
             ]
         ]
 
-playerPrompt : Model -> String
-playerPrompt model = 
+
+playerPrompt : Model -> List (Element Msg)
+playerPrompt model =
     if model.activeAdv == Nothing && model.activeMove == (Nothing, "do something")
-    then "Select an Adventurer and a Move."
+    then [paragraph [][text "Select an Adventurer and a Move."]]
     
     else if model.activeAdv == Nothing
-    then "Select an Adventurer."
+    then [paragraph [][text "Select an Adventurer."]]
     
     else if model.activeMove == (Nothing,"do something")
-    then if (Maybe.map .canMove model.activeAdv == Just True)
-        then "Select a Move."
-        else "Select a DIFFERENT Adventurer!"
+    then [paragraph [][text "Select a Move."]]
     
-    else ""
+    else playerTasks model
 
-playerTasks : Model -> String
+playerTasks : Model -> List (Element Msg)
 playerTasks model =
     case Tuple.first model.activeMove of
         Just Orientate ->
-            ""
+            [paragraph
+                []
+                [ text "...say what you think you have learned by getting your bearings."
+                
+                ]
+            , el [] (text "")
+            , otherButtons Confirm "Confirm?"
+            ]
         Just DelveAhead ->
-            ""
+            [el []
+                ( paragraph
+                    []
+                    [ text "- say who is with you (they must agree)"])
+            , el [] (text "")
+            , el [] (paragraph
+                    []
+                    [ text "- you all are already inside the new section"]
+                )
+            , el [] (text "")
+            , otherButtons Confirm "Confirm?"
+            ]
         Just GoWatchfully ->
-            ""
+            [paragraph
+                []
+                [ text "...say what you think you have learned by getting your bearings."
+                , otherButtons Confirm "Confirm?"
+                ]]
         Nothing ->
-            "model"
+            [paragraph
+                []
+                [ text "...say what you think you have learned by getting your bearings."
+                , otherButtons Confirm "Confirm?"
+                ]]
 
 
 advButtons : Adventurer -> Element Msg
