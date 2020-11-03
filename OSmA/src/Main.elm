@@ -106,31 +106,32 @@ update msg model =
         ActivateAdv adv ->
             if adv.canMove == True
             then {model | activeAdv = Just adv}
-            else {model | activeAdv = Nothing} 
-                
+            else {model | activeAdv = Nothing}      
         Reorient ->
             model
+
         Confirm  ->
             if Maybe.map .canMove model.activeAdv == Just False
             then model
             else
-                case Tuple.first model.activeMove of
-                    Just Orientate ->
-                        {model | navPoints = model.navPoints +1
-                            , activeAdv = init.activeAdv
-                            , activeMove = init.activeMove
-                        }
-                    Just DelveAhead ->
-                        {model | navPoints = model.navPoints +1 }
-                    Just GoWatchfully ->
-                        {model | navPoints = model.navPoints +1 }
-                    Nothing ->
-                        model
-  
-
+                let
+                    newModel =
+                        case Tuple.first model.activeMove of
+                            Just Orientate ->
+                                {model | navPoints = model.navPoints +1}
+                            Just DelveAhead ->
+                                {model | navPoints = model.navPoints +1}
+                            Just GoWatchfully ->
+                                {model | navPoints = model.navPoints +1}
+                            Nothing ->
+                                model
+                in
+                    {newModel 
+                    | activeAdv = init.activeAdv
+                    , activeMove = init.activeMove
+                    }
         MenuAction ->
             model
-
         SetMove (move, name) ->
             {model | activeMove = (Just move, name)}
 
@@ -385,7 +386,17 @@ playerPrompt model =
     
     else ""
 
-
+playerTasks : Model -> String
+playerTasks model =
+    case Tuple.first model.activeMove of
+        Just Orientate ->
+            ""
+        Just DelveAhead ->
+            ""
+        Just GoWatchfully ->
+            ""
+        Nothing ->
+            "model"
 
 
 advButtons : Adventurer -> Element Msg
