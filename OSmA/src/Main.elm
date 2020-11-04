@@ -452,36 +452,36 @@ playerTasks model =
         
         Just Forage ->
             let
-                ptOne = "...you are just OUTSIDE or already INSIDE the new section, your choice"
-                ptTwo = "Others can be with you, if they want, but they'll share the risks."
+                ptOne = "...say WHY it makes sense that such a thing would be available here."
+                ptTwo = "If anyone objects, you can't make this Move."
             in
                 playerTaskStructure ptOne ptTwo
         
         Just Prod ->
             let
-                ptOne = "...say where you think the group should go next, and explain why you think so."
-                ptTwo = "You just earned 1 Navigation point."
+                ptOne = "...say exactly HOW you do it."
+                ptTwo = "Say also what you are afraid could go wrong."
             in
                 playerTaskStructure ptOne ptTwo
            
         Just Inspect ->
             let
-                ptOne = "...you are already INSIDE the new section!"
-                ptTwo = "Others can be with you, if they want, but they'll share the risks."
+                ptOne = "...say exactly HOW you do it"
+                ptTwo = "Say also what you are afraid could go wrong."
             in
                 playerTaskStructure ptOne ptTwo
 
         Just TakeaRisk ->
             let
-                ptOne = "...you are just OUTSIDE or already INSIDE the new section, your choice"
-                ptTwo = "Others can be with you, if they want, but they'll share the risks."
+                ptOne = "...say exactly HOW you do it."
+                ptTwo = "Check if Traits or Help apply and spend them if you want."
             in
                 playerTaskStructure ptOne ptTwo
         
         Just UseIngenuity ->
             let
-                ptOne = "...say where you think the group should go next, and explain why you think so."
-                ptTwo = "You just earned 1 Navigation point."
+                ptOne = "...the Enemy will tell you which Materials, Tools and Knowledges are required and how much Time is needed."
+                ptTwo = "If you have everything ready at hand, say HOW you do it, then it is done."
             in
                 playerTaskStructure ptOne ptTwo
            
