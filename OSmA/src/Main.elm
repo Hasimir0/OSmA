@@ -45,6 +45,12 @@ type Move
     = Orientate
     | DelveAhead
     | GoWatchfully
+    | Forage
+    | Prod
+    | Inspect
+    | TakeaRisk
+    | UseIngenuity
+    | Fight
 
 
 
@@ -65,13 +71,6 @@ init =
     , activeAdv = Nothing
     , activeMove = (Nothing, "do something")
     }
-
-
-
-
-
-
-
 
 
 type Msg =
@@ -123,8 +122,21 @@ update msg model =
                                 {model | navPoints = model.navPoints +1}
                             Just GoWatchfully ->
                                 {model | navPoints = model.navPoints +1}
+                            Just Forage ->
+                                {model | navPoints = model.navPoints +1}
+                            Just Prod ->
+                                {model | navPoints = model.navPoints +1}
+                            Just Inspect ->
+                                {model | navPoints = model.navPoints +1}
+                            Just TakeaRisk ->
+                                {model | navPoints = model.navPoints +1}
+                            Just UseIngenuity ->
+                                {model | navPoints = model.navPoints +1}
+                            Just Fight ->
+                                {model | navPoints = model.navPoints +1}
                             Nothing ->
                                 model
+
                 in
                     {newModel 
                     | activeAdv = init.activeAdv
@@ -247,7 +259,6 @@ movesRow model =
             [ padding 10
             , spacing 30
             , width fill
-            --, Background.color (rgb255 211 211 211)
             ]
             [ column [width (fillPortion 1)]
                 [ el
@@ -286,21 +297,24 @@ movesRow model =
                     , padding 10] (text "SEARCH" )
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [text "Search and Scavenge"]
+                    [ moveButtons (Forage, "Forage")
+                    ]
                 , paragraph stdColumn
                     [ text "When you spend time looking around to find something you need..."]
                 
                 , text ""
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [text "Prod"]
+                    [ moveButtons (Prod, "Prod")
+                    ]
                 , paragraph stdColumn
                     [ text "When you manipulate or get very close to something specific in the current segment..." ]
                 
                 , text ""
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [text "Inspect"]
+                    [ moveButtons (Inspect, "Inspect")
+                    ]
                 , paragraph stdColumn
                     [ text "When you investigate something specific within the current segment with great caution or from a moderate distance..." ]
                 
@@ -313,21 +327,24 @@ movesRow model =
                     , padding 10] (text "OVEWRCOME" )
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [text "Take a Risk"]
+                    [ moveButtons (TakeaRisk, "Take a Risk")
+                    ]
                 , paragraph stdColumn
                     [ text "When you try to overcome an obstacle with your own direct actions..."]
                 
                 , text ""
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [text "Use Ingenuity"]
+                    [ moveButtons (UseIngenuity, "Use Ingenuity")
+                    ]
                 , paragraph stdColumn
                     [ text "When you try to build, repair, craft or produce a thing..." ]
                 
                 , text ""
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [text "Fight!"]
+                    [ moveButtons (Fight, "Fight")
+                    ]
                 , paragraph stdColumn
                     [ text "When you fight a dangerous opponent..." ]
                 ]
@@ -429,6 +446,48 @@ playerTasks model =
         Just GoWatchfully ->
             let
                 ptOne = "...you are just OUTSIDE or already INSIDE the new section, your choice"
+                ptTwo = "Others can be with you, if they want, but they'll share the risks."
+            in
+                playerTaskStructure ptOne ptTwo
+        
+        Just Forage ->
+            let
+                ptOne = "...you are just OUTSIDE or already INSIDE the new section, your choice"
+                ptTwo = "Others can be with you, if they want, but they'll share the risks."
+            in
+                playerTaskStructure ptOne ptTwo
+        
+        Just Prod ->
+            let
+                ptOne = "...say where you think the group should go next, and explain why you think so."
+                ptTwo = "You just earned 1 Navigation point."
+            in
+                playerTaskStructure ptOne ptTwo
+           
+        Just Inspect ->
+            let
+                ptOne = "...you are already INSIDE the new section!"
+                ptTwo = "Others can be with you, if they want, but they'll share the risks."
+            in
+                playerTaskStructure ptOne ptTwo
+
+        Just TakeaRisk ->
+            let
+                ptOne = "...you are just OUTSIDE or already INSIDE the new section, your choice"
+                ptTwo = "Others can be with you, if they want, but they'll share the risks."
+            in
+                playerTaskStructure ptOne ptTwo
+        
+        Just UseIngenuity ->
+            let
+                ptOne = "...say where you think the group should go next, and explain why you think so."
+                ptTwo = "You just earned 1 Navigation point."
+            in
+                playerTaskStructure ptOne ptTwo
+           
+        Just Fight ->
+            let
+                ptOne = "...you are already INSIDE the new section!"
                 ptTwo = "Others can be with you, if they want, but they'll share the risks."
             in
                 playerTaskStructure ptOne ptTwo
