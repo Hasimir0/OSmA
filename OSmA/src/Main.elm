@@ -388,43 +388,56 @@ playerPrompt model =
     
     else playerTasks model
 
+
+playerTaskStructure : String -> String -> List (Element Msg)
+playerTaskStructure playerTaskOne playerTaskTwo =
+    [el [] 
+        ( paragraph
+            [ Background.color (rgb255 200 200 200)
+            , padding 5]
+            [ text playerTaskOne ]
+        )
+    , el [] (text "")
+    , el [] 
+        (paragraph
+            [ Background.color (rgb255 200 200 200)
+            , padding 5]
+            [ text playerTaskTwo ]
+        )
+    , el [] (text "")
+    , otherButtons Confirm "Confirm?"
+    ]
+
 playerTasks : Model -> List (Element Msg)
 playerTasks model =
     case Tuple.first model.activeMove of
+
         Just Orientate ->
-            [paragraph
-                []
-                [ text "...say what you think you have learned by getting your bearings."
-                
-                ]
-            , el [] (text "")
-            , otherButtons Confirm "Confirm?"
-            ]
+            let
+                ptOne = "...say where you think the group should go next, and explain why you think so."
+                ptTwo = "You just earned 1 Navigation point."
+            in
+                playerTaskStructure ptOne ptTwo
+           
         Just DelveAhead ->
-            [el []
-                ( paragraph
-                    []
-                    [ text "- say who is with you (they must agree)"])
-            , el [] (text "")
-            , el [] (paragraph
-                    []
-                    [ text "- you all are already inside the new section"]
-                )
-            , el [] (text "")
-            , otherButtons Confirm "Confirm?"
-            ]
+            let
+                ptOne = "...you are already INSIDE the new section!"
+                ptTwo = "Others can be with you, if they want, but they'll share the risks."
+            in
+                playerTaskStructure ptOne ptTwo
+
         Just GoWatchfully ->
-            [paragraph
-                []
-                [ text "...say what you think you have learned by getting your bearings."
-                , otherButtons Confirm "Confirm?"
-                ]]
+            let
+                ptOne = "...you are just OUTSIDE or already INSIDE the new section, your choice"
+                ptTwo = "Others can be with you, if they want, but they'll share the risks."
+            in
+                playerTaskStructure ptOne ptTwo
+
         Nothing ->
             [paragraph
                 []
-                [ text "...say what you think you have learned by getting your bearings."
-                , otherButtons Confirm "Confirm?"
-                ]]
+                [ text "" ]
+            ]
 
 
 advButtons : Adventurer -> Element Msg
