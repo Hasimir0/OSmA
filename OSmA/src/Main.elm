@@ -10,7 +10,7 @@ import Element.Border as Border
 import Array exposing (Array)
 import Html exposing (div)
 import Maybe exposing (Maybe)
-import Dict exposing (Dict)
+--import Dict exposing (Dict)
 
 
 
