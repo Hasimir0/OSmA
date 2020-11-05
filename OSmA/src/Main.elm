@@ -10,6 +10,7 @@ import Element.Border as Border
 import Array exposing (Array)
 import Html exposing (div)
 import Maybe exposing (Maybe)
+import Dict exposing (Dict)
 
 
 
@@ -116,8 +117,25 @@ update msg model =
                 let
                     newModel =
                         case Tuple.first model.activeMove of
+
                             Just Orientate ->
-                                {model | navPoints = model.navPoints +1}
+                                if model.navPoints < 3
+                                then
+                                    let
+                                        thisAdv = 
+                                            --List.map  model.advList
+                                            case model.activeAdv of
+                                                Just a ->
+                                                    Just {a | canMove = False }
+                                                Nothing ->
+                                                    model.activeAdv
+                                    in
+                                        { model 
+                                        | navPoints = model.navPoints +1
+                                        , activeAdv = thisAdv }
+                                        
+                                else model
+
                             Just DelveAhead ->
                                 {model | navPoints = model.navPoints +1}
                             Just GoWatchfully ->
@@ -139,7 +157,7 @@ update msg model =
 
                 in
                     {newModel 
-                    | activeAdv = init.activeAdv
+                    | activeAdv = Nothing
                     , activeMove = init.activeMove
                     }
         MenuAction ->
@@ -184,11 +202,12 @@ view model =
                 , height fill
                 ]
                 [ text ("This is Round " ++ (String.fromInt model.roundCounter) )
-                , text ("You have " ++ (String.fromInt model.navPoints) ++ " Navigation points." )
+                , column [] (bearingsText model)
                 , sitchRow model
                 ]
             ]
         )
+
 
 
 
@@ -431,8 +450,14 @@ playerTasks model =
 
         Just Orientate ->
             let
-                ptOne = "...say where you think the group should go next, and explain why you think so."
-                ptTwo = "You just earned 1 Navigation point."
+                ptOne = "...say where you think you should go next, and explain why you think so."
+                ptTwo =
+                    ( "You get your bearings. (max. "
+                    ++
+                    ( 3 - model.navPoints |> String.fromInt )
+                    ++
+                    " times)"
+                    )
             in
                 playerTaskStructure ptOne ptTwo
            
@@ -498,6 +523,28 @@ playerTasks model =
                 [ text "" ]
             ]
 
+bearingsText : Model -> List (Element msg)
+bearingsText model = 
+    let
+        navStatus =
+            if model.navPoints == 0
+            then "You are kinda lost."
+            else "You've got your bearings!"
+        navQuality =
+            if model.navPoints == 0
+            then "not"
+            else if model.navPoints == 1
+            then "slightly"
+            else if model.navPoints == 2
+            then "moderately"
+            else "greatly"
+    in
+        [ paragraph []
+            [ text navStatus ]
+        --, el [] ( text "")
+        , paragraph []
+            [ text ( "The next Delve or Go Watchfully will be " ++ navQuality ++ " improved." ) ]
+        ]
 
 advButtons : Adventurer -> Element Msg
 advButtons adv =
