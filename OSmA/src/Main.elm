@@ -10,7 +10,8 @@ import Element.Border as Border
 import Array exposing (Array)
 import Html exposing (div)
 import Maybe exposing (Maybe)
---import Dict exposing (Dict)
+import Dict exposing (Dict)
+import Html.Attributes exposing (name)
 
 
 
@@ -30,15 +31,14 @@ type alias Model =
     { roundCounter : Int
     , navPoints : Int
     , sitchStatus : List String
-    , advList : List Adventurer
-    , activeAdv : Maybe Adventurer
+    , adventurers : Dict String Adventurer
+    , activeAdvName : String
     , activeMove : (Maybe Move, String)
     }
 
 type alias Adventurer =
     { name : String
     , canMove : Bool
-    , activeAdv : Bool
     }
 
 
@@ -64,24 +64,24 @@ init =
         [ "You are in a simple, safe, small space."
         , "You are temporarily sheltered from whatever was chasing you."
         ]
-    , advList =
-        [ { name = "The Nameless One" , canMove = False, activeAdv = False }
-        , { name = "Fake Player" , canMove = True, activeAdv = False }
-        , { name = "Sir Placeholder" , canMove = True, activeAdv = False }
-        ]
-    , activeAdv = Nothing
+    , adventurers =
+        Dict.fromList
+            [ ("The Nameless One", Adventurer "The Nameless One" False)
+            , ("Fake Player", Adventurer "Fake Player" True)
+            , ("Sir Placeholder", Adventurer "Sir Placeholder" True)
+            ]
+    , activeAdvName = "Someone"
     , activeMove = (Nothing, "do something")
     }
 
 
 type Msg =
     SetAction String
-    | ActivateAdv Adventurer
+    | ActivateAdv String
     | MenuAction
     | Reorient
     | Confirm
     | SetMove (Move, String)
-
 
 
 
@@ -103,15 +103,16 @@ update msg model =
             model
         SetAction _ ->
             model
-        ActivateAdv adv ->
-            if adv.canMove == True
-            then {model | activeAdv = Just adv}
-            else {model | activeAdv = Nothing}      
+        ActivateAdv advName ->
+            case (unMaybeer model).canMove of
+                True -> { model | activeAdvName = advName }
+                False -> {model | activeAdvName = "Someone"}
+                    
         Reorient ->
             model
 
         Confirm  ->
-            if model.activeAdv == Nothing
+            if model.activeAdvName == "Someone"
             then model
             else
                 let
@@ -122,17 +123,30 @@ update msg model =
                                 if model.navPoints < 3
                                 then
                                     let
-                                        thisAdv = 
-                                            --List.map  model.advList
-                                            case model.activeAdv of
-                                                Just a ->
-                                                    Just {a | canMove = False }
-                                                Nothing ->
-                                                    model.activeAdv
+                                        {- thisAdv = unMaybeer model
+                                        thisUpdate = 
+                                            --{thisAdv.canMove = False}
+                                            Dict.update model.activeAdvName ( Maybe.map ( {thisAdv | canMove = False}) model.adventurers ) -}
+                                        
+                                        setCanMove : Bool -> Adventurer -> Adventurer
+                                        setCanMove newCanMove adventurer =
+                                            { adventurer | canMove = newCanMove }
+                                        advHasMoved =
+                                            Dict.update
+                                                model.activeAdvName
+                                                (\maybeAdventurer ->
+                                                    case maybeAdventurer of
+                                                        Just adventurer ->
+                                                            adventurer
+                                                                |> setCanMove True
+                                                                |> Just
+                                                        Nothing -> Nothing
+                                                ) model.adventurers
                                     in
-                                        { model 
-                                        | navPoints = model.navPoints +1
-                                        , activeAdv = thisAdv }
+                                    { model 
+                                    | navPoints = model.navPoints +1
+                                    , adventurers = advHasMoved
+                                    }
                                         
                                 else model
 
@@ -157,7 +171,7 @@ update msg model =
 
                 in
                     {newModel 
-                    | activeAdv = Nothing
+                    | activeAdvName = "Someone"
                     , activeMove = init.activeMove
                     }
         MenuAction ->
@@ -260,10 +274,16 @@ selectionRow model =
             ]
         , column
             [ width (fillPortion 2), spacing 15 ]
-            (List.map advButtons model.advList)
+            ( Dict.map advButtons model.adventurers
+            |> Dict.toList
+            |> List.map  )
         ]
 
 
+listOfAdv : { a | adventurers : Dict k v } -> List (k, v)
+listOfAdv model =
+    Dict.toList model.adventurers
+    
 
 movesRow : Model -> Element Msg
 movesRow model =
@@ -381,8 +401,8 @@ bulletListBuilder myList =
 sitchRow : Model -> Element Msg
 sitchRow model =
     let
-        activeAdv =
-            Maybe.map .name model.activeAdv |> Maybe.withDefault "Someone"
+        advName =
+            model.activeAdvName
         activeMove =
             Tuple.second model.activeMove
     in
@@ -398,7 +418,7 @@ sitchRow model =
         , column (stdColumn ++ [width (fillPortion 1) ] )
             [ paragraph
                 []
-                [ el [Font.bold] (text activeAdv)
+                [ el [Font.bold] (text advName)
                 , text ( " is about to ")
                 , el [Font.bold] (text activeMove)
                 , text ( "." )
@@ -413,10 +433,10 @@ sitchRow model =
 
 playerPrompt : Model -> List (Element Msg)
 playerPrompt model =
-    if model.activeAdv == Nothing && model.activeMove == (Nothing, "do something")
+    if model.activeAdvName == "Someone" && model.activeMove == (Nothing, "do something")
     then [paragraph [][text "Select an Adventurer and a Move."]]
     
-    else if model.activeAdv == Nothing
+    else if model.activeAdvName == "Someone"
     then [paragraph [][text "Select an Adventurer."]]
     
     else if model.activeMove == (Nothing,"do something")
@@ -546,26 +566,31 @@ bearingsText model =
             [ text ( "The next Delve or Go Watchfully will be " ++ navQuality ++ " improved." ) ]
         ]
 
-advButtons : Adventurer -> Element Msg
-advButtons adv =
+advButtons : String -> Adventurer -> Element Msg
+advButtons key adv =
     el
         [ Border.solid
         , Border.color (rgb255 0 0 0)
         , Border.width 1
         , Border.rounded 10
         , padding 5
-        , advButtonOverColor adv
+       -- , advButtonOverColor adv
         ]
         (Input.button []
-            { onPress = Just <| ActivateAdv adv
+            { onPress = Just <| ActivateAdv adv.name
             , label = text adv.name
             }
         )
 
+unMaybeer : Model -> Adventurer
+unMaybeer model =
+    case Dict.get model.activeAdvName model.adventurers of
+                Just a -> a
+                Nothing -> {name = "no name", canMove = False}
 
-advButtonOverColor : Adventurer -> Attribute msg
-advButtonOverColor adv =
-    if adv.canMove == False
+advButtonOverColor : Model -> Attribute msg
+advButtonOverColor model =
+    if (unMaybeer model).canMove == False
     then mouseOver [ Background.color (rgb255 255 0 0) ]
     else mouseOver [ Background.color (rgb255 0 255 0) ]
 
@@ -608,7 +633,7 @@ otherButtons msg name =
         )
 
 
-getAdvNames : Model -> List String
+{- getAdvNames : Model -> List String
 getAdvNames model  =
     List.map .name model.advList
 
@@ -619,12 +644,12 @@ getName model index =
     |> Array.fromList
     |> Array.get index
     |> maybeToString
-
-maybeToString : Maybe String -> String
+ -}
+{- maybeToString : Maybe String -> String
 maybeToString x =
     case x of
         Just y -> y
-        Nothing -> "Error!"
+        Nothing -> "Error!" -}
 
 
 
