@@ -12,15 +12,16 @@ import Html exposing (div)
 import Maybe exposing (Maybe)
 import Dict exposing (Dict)
 import Html.Attributes exposing (name)
-
+import Random exposing (generate)
 
 
 -- MAIN
 main : Program () Model Msg
 main =
-    Browser.sandbox
+    Browser.element
         { init = init
         , update = update
+        , subscriptions = subscriptions
         , view = view
         }
 
@@ -30,6 +31,7 @@ main =
 type alias Model =
     { roundCounter : Int
     , navPoints : Int
+    , discoveryPoints : Int
     , sitchStatus : List String
     , adventurers : Dict String Adventurer
     , activeAdvName : String
@@ -40,7 +42,6 @@ type alias Adventurer =
     { name : String
     , canMove : Bool
     }
-
 
 type Move
     = Orientate
@@ -53,27 +54,29 @@ type Move
     | UseIngenuity
     | Fight
 
+init : () -> (Model, Cmd Msg)
+init _ =
+    (initialModel, Cmd.none)
 
-
-
-init : Model
-init =
+initialModel : Model
+initialModel =
     { roundCounter = 0
     , navPoints = 0
+    , discoveryPoints = 0
     , sitchStatus =
         [ "You are in a simple, safe, small space."
         , "You are temporarily sheltered from whatever was chasing you."
         ]
     , adventurers =
         Dict.fromList
-            [ ("The Nameless One", Adventurer "The Nameless One" False)
+            [ ("The Nameless One", Adventurer "The Nameless One" True)
             , ("Fake Player", Adventurer "Fake Player" True)
             , ("Sir Placeholder", Adventurer "Sir Placeholder" True)
             ]
     , activeAdvName = "Someone"
     , activeMove = (Nothing, "do something")
     }
-
+    
 
 type Msg =
     SetAction String
@@ -84,7 +87,9 @@ type Msg =
     | SetMove (Move, String)
 
 
-
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  Sub.none
 
 
 
@@ -92,28 +97,28 @@ type Msg =
 
 
 -- UPDATE
-update : Msg -> Model -> Model
+update : Msg -> Model -> (Model, Cmd Msg)
 update msg model = 
     case msg of
         SetAction "Navigate" ->
-            model
+            (model, Cmd.none)
         SetAction "Search" ->
-            model
+            (model, Cmd.none)
         SetAction "SolveProblems" ->
-            model
+            (model, Cmd.none)
         SetAction _ ->
-            model
+            (model, Cmd.none)
         ActivateAdv adv ->
             case adv.canMove of
-                True -> { model | activeAdvName = adv.name }
-                False -> {model | activeAdvName = "Someone"}
+                True -> ({model | activeAdvName = adv.name } , Cmd.none)
+                False -> ({model | activeAdvName = "Someone"} , Cmd.none)
                     
         Reorient ->
-            model
+            (model, Cmd.none)
 
         Confirm  ->
             if model.activeAdvName == "Someone"
-            then model
+            then (model, Cmd.none)
             else
                 let
                     newModel =
@@ -143,14 +148,15 @@ update msg model =
                             Nothing ->
                                 model
                 in
-                    {newModel 
-                    | activeAdvName = init.activeAdvName
-                    , activeMove = init.activeMove
+                    ({newModel 
+                    | activeAdvName = initialModel.activeAdvName
+                    , activeMove = initialModel.activeMove
                     }
+                    , Cmd.none)
         MenuAction ->
-            model
+            (model, Cmd.none)
         SetMove (move, name) ->
-            {model | activeMove = (Just move, name)}
+            ({model | activeMove = (Just move, name)} , Cmd.none)
 
 
 doOrientate : Model -> Model
@@ -212,14 +218,37 @@ view model =
                 , width (px 800)
                 , height fill
                 ]
-                [ text ("This is Round " ++ (String.fromInt model.roundCounter) )
-                , column [] (bearingsText model)
+                [ statsRow model
                 , sitchRow model
                 ]
             ]
         )
 
 
+
+statsRow : Model -> Element Msg
+statsRow model = 
+    row
+        [ width fill
+        --, Background.color (rgb255 150 150 150)
+        ]
+        [ column
+            [ width (fillPortion 2)
+            , padding 10
+            --, Background.color (rgb255 100 100 100) 
+            ]
+            [ text ("This is Round " ++ (String.fromInt model.roundCounter) )
+            , column [] (bearingsText model)
+            ]
+        , column
+            [ width (fillPortion 1)
+            , padding 10
+            , alignTop
+            ]
+            [ text ("Discovery rating : " ++ (String.fromInt model.discoveryPoints) )
+
+            ]
+        ]
 
 
 stdColumn : List (Attribute msg)
@@ -630,27 +659,48 @@ otherButtons msg name =
         )
 
 
-{- getAdvNames : Model -> List String
-getAdvNames model  =
-    List.map .name model.advList
+{- dieRoller : Generator Int
+dieRoller = Random.int 1 6
 
-
-getName : Model -> Int -> String
-getName model index =
-    List.map .name model.advList
-    |> Array.fromList
-    |> Array.get index
-    |> maybeToString
+revealSomeplace model =
+    let
+        typeRoll = Random.generate NewFace ()
+        modTypeRoll = typeRoll + model.discoveryPoints
+    in
+        if modTypeRoll < 4 then
+            let
+                detailRoll = Random.int 1 6
+            in
+                case detailRoll of
+                   1 -> "ascending"
+                   2 -> "descending"
+                   3 -> "twisting"
+                   4 -> "forking"
+                   5 -> "unstable"
+                   6 -> "obstructed"
+        else if modTypeRoll < 6 then
+            let
+                detailRoll = Random.int 1 6
+            in
+                case detailRoll of
+                   1 -> "small"
+                   2 -> "big"
+                   3 -> "vast"
+                   4 -> "luxurious"
+                   5 -> "ruined"
+                   6 -> "eerie"
+        else
+            let
+                detailRoll = Random.int 1 6
+            in
+                case detailRoll of
+                   1 -> "a chance to get out"
+                   2 -> "a shot at the quest"
+                   3 -> "a great treasure"
+                   4 -> "a brush with evil"
+                   5 -> "?"
+                   6 -> "??"
  -}
-{- maybeToString : Maybe String -> String
-maybeToString x =
-    case x of
-        Just y -> y
-        Nothing -> "Error!" -}
-
-
-
-
 
 
 
