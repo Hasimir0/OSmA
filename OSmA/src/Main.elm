@@ -153,30 +153,33 @@ update msg model =
             {model | activeMove = (Just move, name)}
 
 
-
-    
 doOrientate : Model -> Model
 doOrientate model =
+    { model 
+    | navPoints = model.navPoints +1
+    , adventurers = updateAdvCanMove model
+    }
+
+
+updateAdvCanMove : Model -> Dict String Adventurer
+updateAdvCanMove model =
     let
         setCanMove : Bool -> Adventurer -> Adventurer
         setCanMove newCanMove adventurer =
             { adventurer | canMove = newCanMove }
-        advHasMoved =
-            Dict.update
-                model.activeAdvName
-                (\maybeAdventurer ->
-                    case maybeAdventurer of
-                        Just adventurer ->
-                            adventurer
-                                |> setCanMove False
-                                |> Just
-                        Nothing -> Nothing
-                ) model.adventurers
     in
-    { model 
-    | navPoints = model.navPoints +1
-    , adventurers = advHasMoved
-    }
+        Dict.update
+            model.activeAdvName
+            (\maybeAdventurer ->
+                case maybeAdventurer of
+                    Just adventurer ->
+                        adventurer
+                            |> setCanMove False
+                            |> Just
+                    Nothing -> Nothing
+            ) model.adventurers
+    
+
 
        
 
