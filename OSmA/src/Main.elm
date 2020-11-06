@@ -77,7 +77,7 @@ init =
 
 type Msg =
     SetAction String
-    | ActivateAdv String
+    | ActivateAdv Adventurer
     | MenuAction
     | Reorient
     | Confirm
@@ -103,9 +103,9 @@ update msg model =
             model
         SetAction _ ->
             model
-        ActivateAdv advName ->
-            case (unMaybeer model).canMove of
-                True -> { model | activeAdvName = advName }
+        ActivateAdv adv ->
+            case adv.canMove of
+                True -> { model | activeAdvName = adv.name }
                 False -> {model | activeAdvName = "Someone"}
                     
         Reorient ->
@@ -121,33 +121,7 @@ update msg model =
 
                             Just Orientate ->
                                 if model.navPoints < 3
-                                then
-                                    let
-                                        {- thisAdv = unMaybeer model
-                                        thisUpdate = 
-                                            --{thisAdv.canMove = False}
-                                            Dict.update model.activeAdvName ( Maybe.map ( {thisAdv | canMove = False}) model.adventurers ) -}
-                                        
-                                        setCanMove : Bool -> Adventurer -> Adventurer
-                                        setCanMove newCanMove adventurer =
-                                            { adventurer | canMove = newCanMove }
-                                        advHasMoved =
-                                            Dict.update
-                                                model.activeAdvName
-                                                (\maybeAdventurer ->
-                                                    case maybeAdventurer of
-                                                        Just adventurer ->
-                                                            adventurer
-                                                                |> setCanMove True
-                                                                |> Just
-                                                        Nothing -> Nothing
-                                                ) model.adventurers
-                                    in
-                                    { model 
-                                    | navPoints = model.navPoints +1
-                                    , adventurers = advHasMoved
-                                    }
-                                        
+                                then doOrientate model
                                 else model
 
                             Just DelveAhead ->
@@ -168,10 +142,9 @@ update msg model =
                                 {model | navPoints = model.navPoints +1}
                             Nothing ->
                                 model
-
                 in
                     {newModel 
-                    | activeAdvName = "Someone"
+                    | activeAdvName = init.activeAdvName
                     , activeMove = init.activeMove
                     }
         MenuAction ->
@@ -182,7 +155,28 @@ update msg model =
 
 
     
-
+doOrientate : Model -> Model
+doOrientate model =
+    let
+        setCanMove : Bool -> Adventurer -> Adventurer
+        setCanMove newCanMove adventurer =
+            { adventurer | canMove = newCanMove }
+        advHasMoved =
+            Dict.update
+                model.activeAdvName
+                (\maybeAdventurer ->
+                    case maybeAdventurer of
+                        Just adventurer ->
+                            adventurer
+                                |> setCanMove False
+                                |> Just
+                        Nothing -> Nothing
+                ) model.adventurers
+    in
+    { model 
+    | navPoints = model.navPoints +1
+    , adventurers = advHasMoved
+    }
 
        
 
@@ -275,8 +269,8 @@ selectionRow model =
         , column
             [ width (fillPortion 2), spacing 15 ]
             ( Dict.map advButtons model.adventurers
-            |> Dict.toList
-            |> List.map  )
+            |> Dict.values
+            )
         ]
 
 
@@ -574,10 +568,10 @@ advButtons key adv =
         , Border.width 1
         , Border.rounded 10
         , padding 5
-       -- , advButtonOverColor adv
+        , advButtonOverColor adv
         ]
         (Input.button []
-            { onPress = Just <| ActivateAdv adv.name
+            { onPress = Just <| ActivateAdv adv
             , label = text adv.name
             }
         )
@@ -588,9 +582,9 @@ unMaybeer model =
                 Just a -> a
                 Nothing -> {name = "no name", canMove = False}
 
-advButtonOverColor : Model -> Attribute msg
-advButtonOverColor model =
-    if (unMaybeer model).canMove == False
+advButtonOverColor : Adventurer -> Attribute msg
+advButtonOverColor adv =
+    if adv.canMove == False
     then mouseOver [ Background.color (rgb255 255 0 0) ]
     else mouseOver [ Background.color (rgb255 0 255 0) ]
 
