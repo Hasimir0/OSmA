@@ -32,10 +32,12 @@ type alias Model =
     { roundCounter : Int
     , navPoints : Int
     , discoveryPoints : Int
-    , sitchStatus : List String
+    , somePlaceStatus : List String
+    , someThingStatus : List String
     , adventurers : Dict String Adventurer
     , activeAdvName : String
     , activeMove : (Maybe Move, String)
+    , dieRoll : Int
     }
 
 type alias Adventurer =
@@ -63,9 +65,11 @@ initialModel =
     { roundCounter = 0
     , navPoints = 0
     , discoveryPoints = 0
-    , sitchStatus =
-        [ "You are in a simple, safe, small space."
-        , "You are temporarily sheltered from whatever was chasing you."
+    , somePlaceStatus =
+        [ "a simple, safe, small space" ]
+    , someThingStatus =
+        [ "nothing threatening"
+        , "you are temporarily sheltered from whatever was chasing you  "
         ]
     , adventurers =
         Dict.fromList
@@ -75,6 +79,7 @@ initialModel =
             ]
     , activeAdvName = "Someone"
     , activeMove = (Nothing, "do something")
+    , dieRoll = 0
     }
     
 
@@ -82,9 +87,11 @@ type Msg =
     SetAction String
     | ActivateAdv Adventurer
     | MenuAction
-    | Reorient
+--| Reorient
     | Confirm
     | SetMove (Move, String)
+    | Roll
+    | NewRoll Int
 
 
 subscriptions : Model -> Sub Msg
@@ -113,8 +120,8 @@ update msg model =
                 True -> ({model | activeAdvName = adv.name } , Cmd.none)
                 False -> ({model | activeAdvName = "Someone"} , Cmd.none)
                     
-        Reorient ->
-            (model, Cmd.none)
+       {-  Reorient ->
+            (model, Cmd.none) -}
 
         Confirm  ->
             if model.activeAdvName == "Someone"
@@ -157,7 +164,15 @@ update msg model =
             (model, Cmd.none)
         SetMove (move, name) ->
             ({model | activeMove = (Just move, name)} , Cmd.none)
-
+        
+        Roll ->
+            ( model
+            , Random.generate NewRoll (Random.int 1 6)
+            )
+        NewRoll newRoll ->
+            ( { model | dieRoll = newRoll }
+            , Cmd.none
+            )
 
 doOrientate : Model -> Model
 doOrientate model =
@@ -439,8 +454,26 @@ sitchRow model =
         , Background.color (rgb255 211 211 211)
         ]
         [ column (stdColumn ++ [width (fillPortion 2) ] )
-            (List.map bulletListBuilder model.sitchStatus)
-        
+            [ paragraph
+                [ Background.color (rgb255 211 211 211)
+                , padding 5
+                ]
+                [text "This segment is"]
+
+            , column
+                []
+                (List.map bulletListBuilder model.somePlaceStatus)
+            , el [] (text "")
+            , paragraph
+                [ Background.color (rgb255 211 211 211)
+                , padding 5]
+                [text "You face"]
+
+            , column
+                []
+                (List.map bulletListBuilder model.someThingStatus)
+            ]
+
         , column (stdColumn ++ [width (fillPortion 1) ] )
             [ paragraph
                 []
@@ -455,6 +488,7 @@ sitchRow model =
                 (playerPrompt model)
             ]
         ]
+        
 
 
 playerPrompt : Model -> List (Element Msg)
@@ -608,11 +642,7 @@ advButtons key adv =
             }
         )
 
-unMaybeer : Model -> Adventurer
-unMaybeer model =
-    case Dict.get model.activeAdvName model.adventurers of
-                Just a -> a
-                Nothing -> {name = "no name", canMove = False}
+
 
 advButtonOverColor : Adventurer -> Attribute msg
 advButtonOverColor adv =
@@ -659,49 +689,51 @@ otherButtons msg name =
         )
 
 
-{- dieRoller : Generator Int
-dieRoller = Random.int 1 6
+rollTheDie : Msg
+rollTheDie = Roll
 
+revealSomeplace : Model -> String
 revealSomeplace model =
     let
-        typeRoll = Random.generate NewFace ()
-        modTypeRoll = typeRoll + model.discoveryPoints
+        typeRoll = Roll
+        modTypeRoll = model.dieRoll + model.discoveryPoints
     in
         if modTypeRoll < 4 then
             let
-                detailRoll = Random.int 1 6
+                detailRoll = Roll
             in
-                case detailRoll of
-                   1 -> "ascending"
-                   2 -> "descending"
-                   3 -> "twisting"
-                   4 -> "forking"
-                   5 -> "unstable"
-                   6 -> "obstructed"
+                case model.dieRoll of
+                    1 -> "ascending"
+                    2 -> "descending"
+                    3 -> "twisting"
+                    4 -> "forking"
+                    5 -> "unstable"
+                    6 -> "obstructed"
+                    _ -> "error"
         else if modTypeRoll < 6 then
             let
-                detailRoll = Random.int 1 6
+                detailRoll = Roll
             in
-                case detailRoll of
-                   1 -> "small"
-                   2 -> "big"
-                   3 -> "vast"
-                   4 -> "luxurious"
-                   5 -> "ruined"
-                   6 -> "eerie"
+                case model.dieRoll of
+                    1 -> "small"
+                    2 -> "big"
+                    3 -> "vast"
+                    4 -> "luxurious"
+                    5 -> "ruined"
+                    6 -> "eerie"
+                    _ -> "error"
         else
             let
-                detailRoll = Random.int 1 6
+                detailRoll = Roll
             in
-                case detailRoll of
-                   1 -> "a chance to get out"
-                   2 -> "a shot at the quest"
-                   3 -> "a great treasure"
-                   4 -> "a brush with evil"
-                   5 -> "?"
-                   6 -> "??"
- -}
-
+                case model.dieRoll of
+                    1 -> "a chance to get out"
+                    2 -> "a shot at the quest"
+                    3 -> "a great treasure"
+                    4 -> "a brush with evil"
+                    5 -> "?"
+                    6 -> "??"
+                    _ -> "error"
 
 
 
