@@ -137,7 +137,8 @@ update msg model =
                                 else model
 
                             Just DelveAhead ->
-                                {model | navPoints = model.navPoints +1}
+                                doDelveAhead model
+
                             Just GoWatchfully ->
                                 {model | navPoints = model.navPoints +1}
                             Just Forage ->
@@ -253,6 +254,7 @@ statsRow model =
             --, Background.color (rgb255 100 100 100) 
             ]
             [ text ("This is Round " ++ (String.fromInt model.roundCounter) )
+            , el [] (text "")
             , column [] (bearingsText model)
             ]
         , column
@@ -691,51 +693,92 @@ otherButtons msg name =
 
 rollTheDie : Msg
 rollTheDie = Roll
-
-revealSomeplace : Model -> String
+ 
+revealSomeplace : Model -> Model
 revealSomeplace model =
     let
+        typeRoll : Msg
         typeRoll = Roll
+
         modTypeRoll = model.dieRoll + model.discoveryPoints
     in
         if modTypeRoll < 4 then
             let
-                detailRoll = Roll
+                passagelRoll = Roll
+
+                passageText =
+                    case model.dieRoll of
+                        1 -> "an ascending passage"
+                        2 -> "a descending passage"
+                        3 -> "a twisting passage"
+                        4 -> "a forking passage"
+                        5 -> "an unstable passage"
+                        6 -> "an obstructed passage"
+                        _ -> "error"
+                {- emptyList =
+                    model.somePlaceStatus
+                    |> List.length
+                    |> List.drop -}
             in
-                case model.dieRoll of
-                    1 -> "ascending"
-                    2 -> "descending"
-                    3 -> "twisting"
-                    4 -> "forking"
-                    5 -> "unstable"
-                    6 -> "obstructed"
-                    _ -> "error"
+                {model 
+                | somePlaceStatus = [passageText]
+                , discoveryPoints = model.discoveryPoints +1 }
+
         else if modTypeRoll < 6 then
             let
-                detailRoll = Roll
+                areaRoll = Roll
+
+                areaText =
+                    case model.dieRoll of
+                        1 -> "a small area"
+                        2 -> "a big area"
+                        3 -> "a vast area"
+                        4 -> "a luxurious area"
+                        5 -> "a ruined area"
+                        6 -> "an eerie area"
+                        _ -> "error"
+                openingsRoll = Roll
+
+                openingsText =
+                    if model.dieRoll == 1 then "no"
+                    else if model.dieRoll < 4 then "one"
+                    else if model.dieRoll < 6 then "two"
+                    else "three or more"
             in
-                case model.dieRoll of
-                    1 -> "small"
-                    2 -> "big"
-                    3 -> "vast"
-                    4 -> "luxurious"
-                    5 -> "ruined"
-                    6 -> "eerie"
-                    _ -> "error"
+                {model
+                | somePlaceStatus = 
+                [ areaText
+                , ("beside the one you came in through there are " ++ openingsText ++ " other openings")
+                ]
+                , discoveryPoints = model.discoveryPoints +1 
+                }
         else
             let
-                detailRoll = Roll
+                locationRoll = Roll
+
+                locationText =
+                    case model.dieRoll of
+                        1 -> "a chance to get out"
+                        2 -> "a shot at the quest"
+                        3 -> "a great treasure"
+                        4 -> "a brush with evil"
+                        5 -> "?"
+                        6 -> "??"
+                        _ -> "error"
             in
-                case model.dieRoll of
-                    1 -> "a chance to get out"
-                    2 -> "a shot at the quest"
-                    3 -> "a great treasure"
-                    4 -> "a brush with evil"
-                    5 -> "?"
-                    6 -> "??"
-                    _ -> "error"
+                {model
+                | somePlaceStatus = 
+                [ ("a location that offers " ++ locationText)
+                , ("freely describe it as a Passage or Area that will suit the needs of this special place")
+                ]
+                , discoveryPoints = 0 
+                }
 
 
+doDelveAhead : Model -> Model
+doDelveAhead model =
+        revealSomeplace model
+    
 
 
       
