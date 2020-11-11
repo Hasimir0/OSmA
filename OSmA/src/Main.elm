@@ -185,8 +185,7 @@ doOrientate model =
 doDelveAhead : Model -> Int -> Model
 doDelveAhead model roll =
     { model
-    | dieRoll = roll
-    , somePlaceStatus = revealSomeplace model
+    | somePlaceStatus = revealSomeplace roll 
     , discoveryPoints = model.discoveryPoints +1
     , adventurers = updateAdvCanMove model
     , activeAdvName = initialModel.activeAdvName
@@ -195,32 +194,27 @@ doDelveAhead model roll =
         
 
 
-revealSomeplace : Model -> List String
-revealSomeplace model =
-    if model.dieRoll < 4 then
+revealSomeplace : Int -> List String
+revealSomeplace roll =
+    if roll < 4 then
        let
-            
-
-           passageText =
-                case model.dieRoll of
-                    1 -> "an ascending passage"
-                    2 -> "a descending passage"
-                    3 -> "a twisting passage"
-                    4 -> "a forking passage"
-                    5 -> "an unstable passage"
-                    6 -> "an obstructed passage"
-                    _ -> "error"
+        passageText =
+            case roll of
+                1 -> "an ascending passage"
+                2 -> "a descending passage"
+                3 -> "a twisting passage"
+                4 -> "a forking passage"
+                5 -> "an unstable passage"
+                6 -> "an obstructed passage"
+                _ -> "error"
           
         in
             [passageText]
             
-
-    else if model.dieRoll < 6 then
+    else if roll < 6 then
         let
-            
-
             areaText =
-                case model.dieRoll of
+                case roll of
                     1 -> "a small area"
                     2 -> "a big area"
                     3 -> "a vast area"
@@ -228,12 +222,10 @@ revealSomeplace model =
                     5 -> "a ruined area"
                     6 -> "an eerie area"
                     _ -> "error"
-            
-
             openingsText =
-                if model.dieRoll == 1 then "no"
-                else if model.dieRoll < 4 then "one"
-                else if model.dieRoll < 6 then "two"
+                if roll == 1 then "no"
+                else if roll < 4 then "one"
+                else if roll < 6 then "two"
                 else "three or more"
         in
             [areaText
@@ -241,10 +233,8 @@ revealSomeplace model =
             ]
     else
         let
-            
-
             locationText =
-                case model.dieRoll of
+                case roll of
                     1 -> "a chance to get out"
                     2 -> "a shot at the quest"
                     3 -> "a great treasure"
