@@ -91,7 +91,7 @@ type Msg =
     | MenuAction
     | Confirm
     | SetMove (Move, String)
-    | Roll
+    | MakeRoll
     | NewRoll Int
     | DelveTasks Int
 
@@ -161,16 +161,21 @@ update msg model =
         SetMove (move, name) ->
             ({model | activeMove = (Just move, name)} , Cmd.none)
         
-        Roll ->
+        MakeRoll ->
             ( model
-            , Random.generate NewRoll (Random.int 1 6) 
+            --, Random.generate NewRoll (Random.int 1 6) 
+            , rollDice
             )
         NewRoll newRoll ->
             ( { model | dieRoll = newRoll }
             , Cmd.none
             )
 
-
+rollDice : Cmd Msg
+rollDice =
+    Random.generate SetOfRolls <|
+        Random.map3
+            
 
 doOrientate : Model -> Model
 doOrientate model =
