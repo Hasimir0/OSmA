@@ -13,6 +13,8 @@ import Maybe exposing (Maybe)
 import Dict exposing (Dict)
 import Html.Attributes exposing (name)
 import Random exposing (generate)
+import Task
+import Maybe exposing (andThen)
 
 
 -- MAIN
@@ -87,11 +89,11 @@ type Msg =
     SetAction String
     | ActivateAdv Adventurer
     | MenuAction
---| Reorient
     | Confirm
     | SetMove (Move, String)
     | Roll
     | NewRoll Int
+    | DelveTasks Int
 
 
 subscriptions : Model -> Sub Msg
@@ -120,47 +122,40 @@ update msg model =
                 True -> ({model | activeAdvName = adv.name } , Cmd.none)
                 False -> ({model | activeAdvName = "Someone"} , Cmd.none)
                     
-       {-  Reorient ->
-            (model, Cmd.none) -}
 
         Confirm  ->
             if model.activeAdvName == "Someone"
             then (model, Cmd.none)
             else
-                let
-                    newModel =
-                        case Tuple.first model.activeMove of
+                case Tuple.first model.activeMove of
 
-                            Just Orientate ->
-                                if model.navPoints < 3
-                                then doOrientate model
-                                else model
+                    Just Orientate ->
+                        if model.navPoints < 3
+                        then (doOrientate model, Cmd.none)
+                        else (model, Cmd.none)
 
-                            Just DelveAhead ->
-                                doDelveAhead model
-
-                            Just GoWatchfully ->
-                                {model | navPoints = model.navPoints +1}
-                            Just Forage ->
-                                {model | navPoints = model.navPoints +1}
-                            Just Prod ->
-                                {model | navPoints = model.navPoints +1}
-                            Just Inspect ->
-                                {model | navPoints = model.navPoints +1}
-                            Just TakeaRisk ->
-                                {model | navPoints = model.navPoints +1}
-                            Just UseIngenuity ->
-                                {model | navPoints = model.navPoints +1}
-                            Just Fight ->
-                                {model | navPoints = model.navPoints +1}
-                            Nothing ->
-                                model
-                in
-                    ({newModel 
-                    | activeAdvName = initialModel.activeAdvName
-                    , activeMove = initialModel.activeMove
-                    }
-                    , Cmd.none)
+                    Just DelveAhead ->
+                        (model, Random.generate DelveTasks (Random.int 1 6) )
+                
+                    Just GoWatchfully ->
+                        (model, Cmd.none)
+                    Just Forage ->
+                        (model, Cmd.none)
+                    Just Prod ->
+                        (model, Cmd.none)
+                    Just Inspect ->
+                        (model, Cmd.none)
+                    Just TakeaRisk ->
+                        (model, Cmd.none)
+                    Just UseIngenuity ->
+                        (model, Cmd.none)
+                    Just Fight ->
+                        (model, Cmd.none)
+                    Nothing ->
+                        (model, Cmd.none)
+        DelveTasks roll ->
+            (doDelveAhead model roll, Cmd.none)
+            
         MenuAction ->
             (model, Cmd.none)
         SetMove (move, name) ->
@@ -168,19 +163,110 @@ update msg model =
         
         Roll ->
             ( model
-            , Random.generate NewRoll (Random.int 1 6)
+            , Random.generate NewRoll (Random.int 1 6) 
             )
         NewRoll newRoll ->
             ( { model | dieRoll = newRoll }
             , Cmd.none
             )
 
+
+
 doOrientate : Model -> Model
 doOrientate model =
     { model 
     | navPoints = model.navPoints +1
     , adventurers = updateAdvCanMove model
+    , activeAdvName = initialModel.activeAdvName
+    , activeMove = initialModel.activeMove
     }
+
+
+doDelveAhead : Model -> Int -> Model
+doDelveAhead model roll =
+    { model
+    | dieRoll = roll
+    , somePlaceStatus = revealSomeplace model
+    , discoveryPoints = model.discoveryPoints +1
+    , adventurers = updateAdvCanMove model
+    , activeAdvName = initialModel.activeAdvName
+    , activeMove = initialModel.activeMove
+    }
+        
+
+
+revealSomeplace : Model -> List String
+revealSomeplace model =
+    if model.dieRoll < 4 then
+       let
+            
+
+           passageText =
+                case model.dieRoll of
+                    1 -> "an ascending passage"
+                    2 -> "a descending passage"
+                    3 -> "a twisting passage"
+                    4 -> "a forking passage"
+                    5 -> "an unstable passage"
+                    6 -> "an obstructed passage"
+                    _ -> "error"
+          
+        in
+            [passageText]
+            
+
+    else if model.dieRoll < 6 then
+        let
+            
+
+            areaText =
+                case model.dieRoll of
+                    1 -> "a small area"
+                    2 -> "a big area"
+                    3 -> "a vast area"
+                    4 -> "a luxurious area"
+                    5 -> "a ruined area"
+                    6 -> "an eerie area"
+                    _ -> "error"
+            
+
+            openingsText =
+                if model.dieRoll == 1 then "no"
+                else if model.dieRoll < 4 then "one"
+                else if model.dieRoll < 6 then "two"
+                else "three or more"
+        in
+            [areaText
+            , ("beside the one you came in through there are " ++ openingsText ++ " other openings")
+            ]
+    else
+        let
+            
+
+            locationText =
+                case model.dieRoll of
+                    1 -> "a chance to get out"
+                    2 -> "a shot at the quest"
+                    3 -> "a great treasure"
+                    4 -> "a brush with evil"
+                    5 -> "?"
+                    6 -> "??"
+                    _ -> "error"
+        in
+            
+            [ ("a location that offers " ++ locationText)
+            , ("freely describe it as a Passage or Area that will suit the needs of this special place")
+            ]
+            
+
+
+
+    
+
+
+      
+
+
 
 
 updateAdvCanMove : Model -> Dict String Adventurer
@@ -253,17 +339,17 @@ statsRow model =
             , padding 10
             --, Background.color (rgb255 100 100 100) 
             ]
-            [ text ("This is Round " ++ (String.fromInt model.roundCounter) )
-            , el [] (text "")
-            , column [] (bearingsText model)
+            [ column [] (bearingsText model)
             ]
         , column
             [ width (fillPortion 1)
             , padding 10
             , alignTop
             ]
-            [ text ("Discovery rating : " ++ (String.fromInt model.discoveryPoints) )
-
+            [ text ("This is Round " ++ (String.fromInt model.roundCounter) )
+            , el [] (text "")
+            , text ("Discovery rating : " ++ (String.fromInt model.discoveryPoints) )
+            , text ( model.dieRoll |> String.fromInt )
             ]
         ]
 
@@ -691,94 +777,4 @@ otherButtons msg name =
         )
 
 
-rollTheDie : Msg
-rollTheDie = Roll
  
-revealSomeplace : Model -> Model
-revealSomeplace model =
-    let
-        typeRoll : Msg
-        typeRoll = Roll
-
-        modTypeRoll = model.dieRoll + model.discoveryPoints
-    in
-        if modTypeRoll < 4 then
-            let
-                passagelRoll = Roll
-
-                passageText =
-                    case model.dieRoll of
-                        1 -> "an ascending passage"
-                        2 -> "a descending passage"
-                        3 -> "a twisting passage"
-                        4 -> "a forking passage"
-                        5 -> "an unstable passage"
-                        6 -> "an obstructed passage"
-                        _ -> "error"
-                {- emptyList =
-                    model.somePlaceStatus
-                    |> List.length
-                    |> List.drop -}
-            in
-                {model 
-                | somePlaceStatus = [passageText]
-                , discoveryPoints = model.discoveryPoints +1 }
-
-        else if modTypeRoll < 6 then
-            let
-                areaRoll = Roll
-
-                areaText =
-                    case model.dieRoll of
-                        1 -> "a small area"
-                        2 -> "a big area"
-                        3 -> "a vast area"
-                        4 -> "a luxurious area"
-                        5 -> "a ruined area"
-                        6 -> "an eerie area"
-                        _ -> "error"
-                openingsRoll = Roll
-
-                openingsText =
-                    if model.dieRoll == 1 then "no"
-                    else if model.dieRoll < 4 then "one"
-                    else if model.dieRoll < 6 then "two"
-                    else "three or more"
-            in
-                {model
-                | somePlaceStatus = 
-                [ areaText
-                , ("beside the one you came in through there are " ++ openingsText ++ " other openings")
-                ]
-                , discoveryPoints = model.discoveryPoints +1 
-                }
-        else
-            let
-                locationRoll = Roll
-
-                locationText =
-                    case model.dieRoll of
-                        1 -> "a chance to get out"
-                        2 -> "a shot at the quest"
-                        3 -> "a great treasure"
-                        4 -> "a brush with evil"
-                        5 -> "?"
-                        6 -> "??"
-                        _ -> "error"
-            in
-                {model
-                | somePlaceStatus = 
-                [ ("a location that offers " ++ locationText)
-                , ("freely describe it as a Passage or Area that will suit the needs of this special place")
-                ]
-                , discoveryPoints = 0 
-                }
-
-
-doDelveAhead : Model -> Model
-doDelveAhead model =
-        revealSomeplace model
-    
-
-
-      
