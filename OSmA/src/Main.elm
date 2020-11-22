@@ -15,6 +15,7 @@ import Html.Attributes exposing (name)
 import Random exposing (generate)
 import Task
 import Maybe exposing (andThen)
+import Html.Attributes exposing (kind)
 
 
 -- MAIN
@@ -40,6 +41,7 @@ type alias Model =
     , activeAdvName : String
     , activeMove : (Maybe Move, String)
     , dieRoll : Int
+    , segment : Maybe Segment
     }
 
 type alias Adventurer =
@@ -82,6 +84,7 @@ initialModel =
     , activeAdvName = "Someone"
     , activeMove = (Nothing, "do something")
     , dieRoll = 0
+    , segment = Nothing
     }
     
 
@@ -91,9 +94,10 @@ type Msg =
     | MenuAction
     | Confirm
     | SetMove (Move, String)
-    | MakeRoll
+    | SegmentRolls Segment
+{-     | MakeRoll
     | NewRoll Int
-    | DelveTasks Int
+    | DelveTasks Int -}
 
 
 subscriptions : Model -> Sub Msg
@@ -101,7 +105,11 @@ subscriptions model =
   Sub.none
 
 
-
+type alias Segment =
+    { kind : Int
+    , detail : Int
+    , openings : Int
+    }
 
 
 
@@ -129,13 +137,13 @@ update msg model =
             else
                 case Tuple.first model.activeMove of
 
-                    Just Orientate ->
+                    Just Orientate -> -- Move type, not Msg type
                         if model.navPoints < 3
                         then (doOrientate model, Cmd.none)
                         else (model, Cmd.none)
 
                     Just DelveAhead ->
-                        (model, Random.generate DelveTasks (Random.int 1 6) )
+                        (model, rollDelveAhead)
                 
                     Just GoWatchfully ->
                         (model, Cmd.none)
@@ -153,29 +161,15 @@ update msg model =
                         (model, Cmd.none)
                     Nothing ->
                         (model, Cmd.none)
-        DelveTasks roll ->
-            (doDelveAhead model roll, Cmd.none)
+        SegmentRolls nuSegment ->
+            ({model | segment = Just nuSegment}, Cmd.none)
             
         MenuAction ->
             (model, Cmd.none)
         SetMove (move, name) ->
             ({model | activeMove = (Just move, name)} , Cmd.none)
-        
-        MakeRoll ->
-            ( model
-            --, Random.generate NewRoll (Random.int 1 6) 
-            , rollDice
-            )
-        NewRoll newRoll ->
-            ( { model | dieRoll = newRoll }
-            , Cmd.none
-            )
 
-rollDice : Cmd Msg
-rollDice =
-    Random.generate SetOfRolls <|
-        Random.map3
-            
+
 
 doOrientate : Model -> Model
 doOrientate model =
@@ -187,7 +181,16 @@ doOrientate model =
     }
 
 
-doDelveAhead : Model -> Int -> Model
+rollDelveAhead : Cmd Msg
+rollDelveAhead =
+    Random.generate SegmentRolls <|
+        Random.map3
+            Segment
+            (Random.int 1 6)
+            (Random.int 1 6)
+            (Random.int 1 6)
+
+{- doDelveAhead : Model -> Int -> Model
 doDelveAhead model roll =
     { model
     | somePlaceStatus = revealSomeplace roll 
@@ -196,7 +199,7 @@ doDelveAhead model roll =
     , activeAdvName = initialModel.activeAdvName
     , activeMove = initialModel.activeMove
     }
-        
+ -}        
 
 
 revealSomeplace : Int -> List String
@@ -344,7 +347,7 @@ statsRow model =
             [ text ("This is Round " ++ (String.fromInt model.roundCounter) )
             , el [] (text "")
             , text ("Discovery rating : " ++ (String.fromInt model.discoveryPoints) )
-            , text ( model.dieRoll |> String.fromInt )
+            --, text ( model.dieRoll |> String.fromInt )
             ]
         ]
 
