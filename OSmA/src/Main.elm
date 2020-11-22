@@ -40,7 +40,7 @@ type alias Model =
     , adventurers : Dict String Adventurer
     , activeAdvName : String
     , activeMove : (Maybe Move, String)
-    , dieRoll : Int
+    --, dieRoll : Int
     , segment : Maybe Segment
     }
 
@@ -83,7 +83,6 @@ initialModel =
             ]
     , activeAdvName = "Someone"
     , activeMove = (Nothing, "do something")
-    , dieRoll = 0
     , segment = Nothing
     }
     
@@ -95,9 +94,7 @@ type Msg =
     | Confirm
     | SetMove (Move, String)
     | SegmentRolls Segment
-{-     | MakeRoll
-    | NewRoll Int
-    | DelveTasks Int -}
+
 
 
 subscriptions : Model -> Sub Msg
@@ -190,71 +187,64 @@ rollDelveAhead =
             (Random.int 1 6)
             (Random.int 1 6)
 
-{- doDelveAhead : Model -> Int -> Model
-doDelveAhead model roll =
-    { model
-    | somePlaceStatus = revealSomeplace roll 
-    , discoveryPoints = model.discoveryPoints +1
-    , adventurers = updateAdvCanMove model
-    , activeAdvName = initialModel.activeAdvName
-    , activeMove = initialModel.activeMove
-    }
- -}        
+       
 
 
-revealSomeplace : Int -> List String
-revealSomeplace roll =
-    if roll < 4 then
-       let
-        passageText =
-            case roll of
-                1 -> "an ascending passage"
-                2 -> "a descending passage"
-                3 -> "a twisting passage"
-                4 -> "a forking passage"
-                5 -> "an unstable passage"
-                6 -> "an obstructed passage"
-                _ -> "error"
-          
-        in
-            [passageText]
-            
-    else if roll < 6 then
+revealSomeplace : Model -> List String
+revealSomeplace model =
+    case model.segment of
+       Nothing -> ["Error"]
+       Just thisSegment ->
+        if thisSegment.kind < 4 then
         let
-            areaText =
-                case roll of
-                    1 -> "a small area"
-                    2 -> "a big area"
-                    3 -> "a vast area"
-                    4 -> "a luxurious area"
-                    5 -> "a ruined area"
-                    6 -> "an eerie area"
+            passageText =
+                case thisSegment.detail of
+                    1 -> "an ascending passage"
+                    2 -> "a descending passage"
+                    3 -> "a twisting passage"
+                    4 -> "a forking passage"
+                    5 -> "an unstable passage"
+                    6 -> "an obstructed passage"
                     _ -> "error"
-            openingsText =
-                if roll == 1 then "no"
-                else if roll < 4 then "one"
-                else if roll < 6 then "two"
-                else "three or more"
-        in
-            [areaText
-            , ("beside the one you came in through there are " ++ openingsText ++ " other openings")
-            ]
-    else
-        let
-            locationText =
-                case roll of
-                    1 -> "a chance to get out"
-                    2 -> "a shot at the quest"
-                    3 -> "a great treasure"
-                    4 -> "a brush with evil"
-                    5 -> "?"
-                    6 -> "??"
-                    _ -> "error"
-        in
-            
-            [ ("a location that offers " ++ locationText)
-            , ("freely describe it as a Passage or Area that will suit the needs of this special place")
-            ]
+            in
+                [passageText]
+                
+        else if thisSegment.kind < 6 then
+            let
+                areaText =
+                    case thisSegment.detail of
+                        1 -> "a small area"
+                        2 -> "a big area"
+                        3 -> "a vast area"
+                        4 -> "a luxurious area"
+                        5 -> "a ruined area"
+                        6 -> "an eerie area"
+                        _ -> "error"
+                openingsText =
+                    if thisSegment.openings == 1 then "no"
+                    else if thisSegment.openings < 4 then "one"
+                    else if thisSegment.openings < 6 then "two"
+                    else "three or more"
+            in
+                [areaText
+                , ("beside the one you came in through there are " ++ openingsText ++ " other openings")
+                ]
+        else
+            let
+                locationText =
+                    case thisSegment.detail of
+                        1 -> "a chance to get out"
+                        2 -> "a shot at the quest"
+                        3 -> "a great treasure"
+                        4 -> "a brush with evil"
+                        5 -> "?"
+                        6 -> "??"
+                        _ -> "error"
+            in
+                
+                [ ("a location that offers " ++ locationText)
+                , ("freely describe it as a Passage or Area that will suit the needs of this special place")
+                ]
             
 
 
