@@ -10616,10 +10616,10 @@ var $author$project$Main$initialModel = {
 				'Sir Placeholder',
 				A2($author$project$Main$Adventurer, 'Sir Placeholder', true))
 			])),
-	dieRoll: 0,
 	discoveryPoints: 0,
 	navPoints: 0,
 	roundCounter: 0,
+	segment: $elm$core$Maybe$Nothing,
 	somePlaceStatus: _List_fromArray(
 		['a simple, safe, small space']),
 	someThingStatus: _List_fromArray(
@@ -10633,105 +10633,93 @@ var $elm$core$Platform$Sub$none = $elm$core$Platform$Sub$batch(_List_Nil);
 var $author$project$Main$subscriptions = function (model) {
 	return $elm$core$Platform$Sub$none;
 };
-var $author$project$Main$NewRoll = function (a) {
-	return {$: 'NewRoll', a: a};
-};
-var $author$project$Main$Roll = {$: 'Roll'};
-var $author$project$Main$revealSomeplace = function (model) {
-	var typeRoll = $author$project$Main$Roll;
-	var modTypeRoll = model.dieRoll + model.discoveryPoints;
-	if (modTypeRoll < 4) {
-		var passagelRoll = $author$project$Main$Roll;
-		var passageText = function () {
-			var _v0 = model.dieRoll;
-			switch (_v0) {
-				case 1:
-					return 'an ascending passage';
-				case 2:
-					return 'a descending passage';
-				case 3:
-					return 'a twisting passage';
-				case 4:
-					return 'a forking passage';
-				case 5:
-					return 'an unstable passage';
-				case 6:
-					return 'an obstructed passage';
-				default:
-					return 'error';
-			}
-		}();
-		return _Utils_update(
-			model,
-			{
-				discoveryPoints: model.discoveryPoints + 1,
-				somePlaceStatus: _List_fromArray(
-					[passageText])
-			});
+var $author$project$Main$discoveryUpdate = function (model) {
+	var _v0 = model.segment;
+	if (_v0.$ === 'Nothing') {
+		return model.discoveryPoints;
 	} else {
-		if (modTypeRoll < 6) {
-			var openingsText = (model.dieRoll === 1) ? 'no' : ((model.dieRoll < 4) ? 'one' : ((model.dieRoll < 6) ? 'two' : 'three or more'));
-			var openingsRoll = $author$project$Main$Roll;
-			var areaText = function () {
-				var _v1 = model.dieRoll;
-				switch (_v1) {
-					case 1:
-						return 'a small area';
-					case 2:
-						return 'a big area';
-					case 3:
-						return 'a vast area';
-					case 4:
-						return 'a luxurious area';
-					case 5:
-						return 'a ruined area';
-					case 6:
-						return 'an eerie area';
-					default:
-						return 'error';
-				}
-			}();
-			var areaRoll = $author$project$Main$Roll;
-			return _Utils_update(
-				model,
-				{
-					discoveryPoints: model.discoveryPoints + 1,
-					somePlaceStatus: _List_fromArray(
-						[areaText, 'beside the one you came in through there are ' + (openingsText + ' other openings')])
-				});
-		} else {
-			var locationText = function () {
-				var _v2 = model.dieRoll;
-				switch (_v2) {
-					case 1:
-						return 'a chance to get out';
-					case 2:
-						return 'a shot at the quest';
-					case 3:
-						return 'a great treasure';
-					case 4:
-						return 'a brush with evil';
-					case 5:
-						return '?';
-					case 6:
-						return '??';
-					default:
-						return 'error';
-				}
-			}();
-			var locationRoll = $author$project$Main$Roll;
-			return _Utils_update(
-				model,
-				{
-					discoveryPoints: 0,
-					somePlaceStatus: _List_fromArray(
-						['a location that offers ' + locationText, 'freely describe it as a Passage or Area that will suit the needs of this special place'])
-				});
-		}
+		var segment = _v0.a;
+		return (segment.kind < 6) ? (model.discoveryPoints + 1) : 0;
 	}
 };
-var $author$project$Main$doDelveAhead = function (model) {
-	return $author$project$Main$revealSomeplace(model);
+var $author$project$Main$revealSomeplace = function (model) {
+	var _v0 = model.segment;
+	if (_v0.$ === 'Just') {
+		var thisSegment = _v0.a;
+		if (thisSegment.kind < 4) {
+			var passageText = function () {
+				var _v1 = thisSegment.detail;
+				switch (_v1) {
+					case 1:
+						return 'an ascending passage';
+					case 2:
+						return 'a descending passage';
+					case 3:
+						return 'a twisting passage';
+					case 4:
+						return 'a forking passage';
+					case 5:
+						return 'an unstable passage';
+					case 6:
+						return 'an obstructed passage';
+					default:
+						return 'error';
+				}
+			}();
+			return _List_fromArray(
+				[passageText]);
+		} else {
+			if (thisSegment.kind < 6) {
+				var openingsText = (thisSegment.openings === 1) ? 'no' : ((thisSegment.openings < 4) ? 'one' : ((thisSegment.openings < 6) ? 'two' : 'three or more'));
+				var areaText = function () {
+					var _v2 = thisSegment.detail;
+					switch (_v2) {
+						case 1:
+							return 'a small area';
+						case 2:
+							return 'a big area';
+						case 3:
+							return 'a vast area';
+						case 4:
+							return 'a luxurious area';
+						case 5:
+							return 'a ruined area';
+						case 6:
+							return 'an eerie area';
+						default:
+							return 'error';
+					}
+				}();
+				return _List_fromArray(
+					[areaText, 'beside the one you came in through there are ' + (openingsText + ' other openings')]);
+			} else {
+				var locationText = function () {
+					var _v3 = thisSegment.detail;
+					switch (_v3) {
+						case 1:
+							return 'a chance to get out';
+						case 2:
+							return 'a shot at the quest';
+						case 3:
+							return 'a great treasure';
+						case 4:
+							return 'a brush with evil';
+						case 5:
+							return '?';
+						case 6:
+							return '??';
+						default:
+							return 'error';
+					}
+				}();
+				return _List_fromArray(
+					['a location that offers ' + locationText, 'freely describe it as a Passage or Area that will suit the needs of this special place']);
+			}
+		}
+	} else {
+		return _List_fromArray(
+			['No Segment']);
+	}
 };
 var $author$project$Main$updateAdvCanMove = function (model) {
 	var setCanMove = F2(
@@ -10754,13 +10742,35 @@ var $author$project$Main$updateAdvCanMove = function (model) {
 		},
 		model.adventurers);
 };
+var $author$project$Main$doDelveAhead = F2(
+	function (model, nuSegment) {
+		return _Utils_update(
+			model,
+			{
+				activeAdvName: $author$project$Main$initialModel.activeAdvName,
+				activeMove: $author$project$Main$initialModel.activeMove,
+				adventurers: $author$project$Main$updateAdvCanMove(model),
+				discoveryPoints: $author$project$Main$discoveryUpdate(model),
+				segment: $elm$core$Maybe$Just(nuSegment),
+				somePlaceStatus: $author$project$Main$revealSomeplace(model)
+			});
+	});
 var $author$project$Main$doOrientate = function (model) {
 	return _Utils_update(
 		model,
 		{
+			activeAdvName: $author$project$Main$initialModel.activeAdvName,
+			activeMove: $author$project$Main$initialModel.activeMove,
 			adventurers: $author$project$Main$updateAdvCanMove(model),
 			navPoints: model.navPoints + 1
 		});
+};
+var $author$project$Main$Segment = F3(
+	function (kind, detail, openings) {
+		return {detail: detail, kind: kind, openings: openings};
+	});
+var $author$project$Main$SegmentRolls = function (a) {
+	return {$: 'SegmentRolls', a: a};
 };
 var $elm$random$Random$Generate = function (a) {
 	return {$: 'Generate', a: a};
@@ -10906,6 +10916,36 @@ var $elm$random$Random$int = F2(
 				}
 			});
 	});
+var $elm$random$Random$map3 = F4(
+	function (func, _v0, _v1, _v2) {
+		var genA = _v0.a;
+		var genB = _v1.a;
+		var genC = _v2.a;
+		return $elm$random$Random$Generator(
+			function (seed0) {
+				var _v3 = genA(seed0);
+				var a = _v3.a;
+				var seed1 = _v3.b;
+				var _v4 = genB(seed1);
+				var b = _v4.a;
+				var seed2 = _v4.b;
+				var _v5 = genC(seed2);
+				var c = _v5.a;
+				var seed3 = _v5.b;
+				return _Utils_Tuple2(
+					A3(func, a, b, c),
+					seed3);
+			});
+	});
+var $author$project$Main$rollDelveAhead = A2(
+	$elm$random$Random$generate,
+	$author$project$Main$SegmentRolls,
+	A4(
+		$elm$random$Random$map3,
+		$author$project$Main$Segment,
+		A2($elm$random$Random$int, 1, 6),
+		A2($elm$random$Random$int, 1, 6),
+		A2($elm$random$Random$int, 1, 6)));
 var $author$project$Main$update = F2(
 	function (msg, model) {
 		switch (msg.$) {
@@ -10940,65 +10980,51 @@ var $author$project$Main$update = F2(
 				if (model.activeAdvName === 'Someone') {
 					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 				} else {
-					var newModel = function () {
-						var _v2 = model.activeMove.a;
-						if (_v2.$ === 'Just') {
-							switch (_v2.a.$) {
-								case 'Orientate':
-									var _v3 = _v2.a;
-									return (model.navPoints < 3) ? $author$project$Main$doOrientate(model) : model;
-								case 'DelveAhead':
-									var _v4 = _v2.a;
-									return $author$project$Main$doDelveAhead(model);
-								case 'GoWatchfully':
-									var _v5 = _v2.a;
-									return _Utils_update(
-										model,
-										{navPoints: model.navPoints + 1});
-								case 'Forage':
-									var _v6 = _v2.a;
-									return _Utils_update(
-										model,
-										{navPoints: model.navPoints + 1});
-								case 'Prod':
-									var _v7 = _v2.a;
-									return _Utils_update(
-										model,
-										{navPoints: model.navPoints + 1});
-								case 'Inspect':
-									var _v8 = _v2.a;
-									return _Utils_update(
-										model,
-										{navPoints: model.navPoints + 1});
-								case 'TakeaRisk':
-									var _v9 = _v2.a;
-									return _Utils_update(
-										model,
-										{navPoints: model.navPoints + 1});
-								case 'UseIngenuity':
-									var _v10 = _v2.a;
-									return _Utils_update(
-										model,
-										{navPoints: model.navPoints + 1});
-								default:
-									var _v11 = _v2.a;
-									return _Utils_update(
-										model,
-										{navPoints: model.navPoints + 1});
-							}
-						} else {
-							return model;
+					var _v2 = model.activeMove.a;
+					if (_v2.$ === 'Just') {
+						switch (_v2.a.$) {
+							case 'Orientate':
+								var _v3 = _v2.a;
+								return (model.navPoints < 3) ? _Utils_Tuple2(
+									$author$project$Main$doOrientate(model),
+									$elm$core$Platform$Cmd$none) : _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+							case 'DelveAhead':
+								var _v4 = _v2.a;
+								return _Utils_Tuple2(model, $author$project$Main$rollDelveAhead);
+							case 'GoWatchfully':
+								var _v5 = _v2.a;
+								return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+							case 'Forage':
+								var _v6 = _v2.a;
+								return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+							case 'Prod':
+								var _v7 = _v2.a;
+								return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+							case 'Inspect':
+								var _v8 = _v2.a;
+								return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+							case 'TakeaRisk':
+								var _v9 = _v2.a;
+								return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+							case 'UseIngenuity':
+								var _v10 = _v2.a;
+								return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+							default:
+								var _v11 = _v2.a;
+								return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 						}
-					}();
-					return _Utils_Tuple2(
-						_Utils_update(
-							newModel,
-							{activeAdvName: $author$project$Main$initialModel.activeAdvName, activeMove: $author$project$Main$initialModel.activeMove}),
-						$elm$core$Platform$Cmd$none);
+					} else {
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+					}
 				}
+			case 'SegmentRolls':
+				var nuSegment = msg.a;
+				return _Utils_Tuple2(
+					A2($author$project$Main$doDelveAhead, model, nuSegment),
+					$elm$core$Platform$Cmd$none);
 			case 'MenuAction':
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-			case 'SetMove':
+			default:
 				var _v12 = msg.a;
 				var move = _v12.a;
 				var name = _v12.b;
@@ -11010,20 +11036,6 @@ var $author$project$Main$update = F2(
 								$elm$core$Maybe$Just(move),
 								name)
 						}),
-					$elm$core$Platform$Cmd$none);
-			case 'Roll':
-				return _Utils_Tuple2(
-					model,
-					A2(
-						$elm$random$Random$generate,
-						$author$project$Main$NewRoll,
-						A2($elm$random$Random$int, 1, 6)));
-			default:
-				var newRoll = msg.a;
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{dieRoll: newRoll}),
 					$elm$core$Platform$Cmd$none);
 		}
 	});
@@ -17904,12 +17916,6 @@ var $author$project$Main$statsRow = function (model) {
 					]),
 				_List_fromArray(
 					[
-						$mdgriffith$elm_ui$Element$text(
-						'This is Round ' + $elm$core$String$fromInt(model.roundCounter)),
-						A2(
-						$mdgriffith$elm_ui$Element$el,
-						_List_Nil,
-						$mdgriffith$elm_ui$Element$text('')),
 						A2(
 						$mdgriffith$elm_ui$Element$column,
 						_List_Nil,
@@ -17926,6 +17932,12 @@ var $author$project$Main$statsRow = function (model) {
 					]),
 				_List_fromArray(
 					[
+						$mdgriffith$elm_ui$Element$text(
+						'This is Round ' + $elm$core$String$fromInt(model.roundCounter)),
+						A2(
+						$mdgriffith$elm_ui$Element$el,
+						_List_Nil,
+						$mdgriffith$elm_ui$Element$text('')),
 						$mdgriffith$elm_ui$Element$text(
 						'Discovery rating : ' + $elm$core$String$fromInt(model.discoveryPoints))
 					]))
@@ -17989,7 +18001,7 @@ var $author$project$Main$view = function (model) {
 var $author$project$Main$main = $elm$browser$Browser$element(
 	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
 _Platform_export({'Main':{'init':$author$project$Main$main(
-	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Main.Adventurer":{"args":[],"type":"{ name : String.String, canMove : Basics.Bool }"}},"unions":{"Main.Msg":{"args":[],"tags":{"SetAction":["String.String"],"ActivateAdv":["Main.Adventurer"],"MenuAction":[],"Confirm":[],"SetMove":["( Main.Move, String.String )"],"Roll":[],"NewRoll":["Basics.Int"]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"Main.Move":{"args":[],"tags":{"Orientate":[],"DelveAhead":[],"GoWatchfully":[],"Forage":[],"Prod":[],"Inspect":[],"TakeaRisk":[],"UseIngenuity":[],"Fight":[]}},"String.String":{"args":[],"tags":{"String":[]}}}}})}});}(this));
+	$elm$json$Json$Decode$succeed(_Utils_Tuple0))({"versions":{"elm":"0.19.1"},"types":{"message":"Main.Msg","aliases":{"Main.Adventurer":{"args":[],"type":"{ name : String.String, canMove : Basics.Bool }"},"Main.Segment":{"args":[],"type":"{ kind : Basics.Int, detail : Basics.Int, openings : Basics.Int }"}},"unions":{"Main.Msg":{"args":[],"tags":{"SetAction":["String.String"],"ActivateAdv":["Main.Adventurer"],"MenuAction":[],"Confirm":[],"SetMove":["( Main.Move, String.String )"],"SegmentRolls":["Main.Segment"]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"Main.Move":{"args":[],"tags":{"Orientate":[],"DelveAhead":[],"GoWatchfully":[],"Forage":[],"Prod":[],"Inspect":[],"TakeaRisk":[],"UseIngenuity":[],"Fight":[]}},"String.String":{"args":[],"tags":{"String":[]}}}}})}});}(this));
 
   var app = Elm.Main.init({ node: document.getElementById("elm") });
 }

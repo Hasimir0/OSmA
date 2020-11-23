@@ -35,18 +35,21 @@ type alias Model =
     { roundCounter : Int
     , navPoints : Int
     , discoveryPoints : Int
-    , somePlaceStatus : List String
-    , someThingStatus : List String
     , adventurers : Dict String Adventurer
     , activeAdvName : String
     , activeMove : (Maybe Move, String)
-    --, dieRoll : Int
     , segment : Maybe Segment
     }
 
 type alias Adventurer =
     { name : String
     , canMove : Bool
+    }
+
+type alias Segment =
+    { kind : SomePlace
+    , description : Int
+    , openings : Int
     }
 
 type Move
@@ -69,12 +72,6 @@ initialModel =
     { roundCounter = 0
     , navPoints = 0
     , discoveryPoints = 0
-    , somePlaceStatus =
-        [ "a simple, safe, small space" ]
-    , someThingStatus =
-        [ "nothing threatening"
-        , "you are temporarily sheltered from whatever was chasing you  "
-        ]
     , adventurers =
         Dict.fromList
             [ ("The Nameless One", Adventurer "The Nameless One" True)
@@ -83,9 +80,14 @@ initialModel =
             ]
     , activeAdvName = "Someone"
     , activeMove = (Nothing, "do something")
-    , segment = Nothing
+    , segment = Just 
+        { kind = Area
+        , description = 0 --"a small space, simple and mostly empty, currently safe"
+        , openings = 0 --"some openings :P"
+        }
     }
     
+
 
 type Msg =
     SetAction String
@@ -102,11 +104,7 @@ subscriptions model =
   Sub.none
 
 
-type alias Segment =
-    { kind : Int
-    , detail : Int
-    , openings : Int
-    }
+
 
 
 
@@ -127,7 +125,6 @@ update msg model =
                 True -> ({model | activeAdvName = adv.name } , Cmd.none)
                 False -> ({model | activeAdvName = "Someone"} , Cmd.none)
                     
-
         Confirm  ->
             if model.activeAdvName == "Someone"
             then (model, Cmd.none)
@@ -159,7 +156,7 @@ update msg model =
                     Nothing ->
                         (model, Cmd.none)
         SegmentRolls nuSegment ->
-            ({model | segment = Just nuSegment}, Cmd.none)
+            (doDelveAhead model nuSegment, Cmd.none)
             
         MenuAction ->
             (model, Cmd.none)
@@ -177,76 +174,164 @@ doOrientate model =
     , activeMove = initialModel.activeMove
     }
 
+doDelveAhead : Model -> Segment-> Model
+doDelveAhead model nuSegment =
+    { model 
+    | segment = Just nuSegment
+    , discoveryPoints = discoveryUpdate model
+    , adventurers = updateAdvCanMove model
+    , activeAdvName = initialModel.activeAdvName
+    , activeMove = initialModel.activeMove
+    }
+
+discoveryUpdate : Model -> Int
+discoveryUpdate model =
+    case model.segment of
+        Nothing -> model.discoveryPoints
+        Just segment ->
+            case segment.kind of
+               Location -> 0
+               Passage -> model.discoveryPoints + 1
+               Area -> model.discoveryPoints + 1
+            
+
+
+
+
+dieRoll : Random.Generator Int
+dieRoll = Random.int 1 6
 
 rollDelveAhead : Cmd Msg
 rollDelveAhead =
-    Random.generate SegmentRolls <|
-        Random.map3
+    Random.map3
             Segment
-            (Random.int 1 6)
-            (Random.int 1 6)
-            (Random.int 1 6)
+            kindRoll
+            dieRoll
+            dieRoll
+    |>
+    Random.generate SegmentRolls
+        
 
-       
+type SomePlace
+    = Passage
+    | Area
+    | Location
 
+kindRoll : Random.Generator SomePlace
+kindRoll = 
+    Random.weighted
+        (3, Passage )
+        [ (2, Area )
+        , (1, Location )
+        ]
+        --|> Random.andThen detailsRoll
 
-revealSomeplace : Model -> List String
-revealSomeplace model =
-    case model.segment of
-       Nothing -> ["Error"]
-       Just thisSegment ->
-        if thisSegment.kind < 4 then
-        let
-            passageText =
-                case thisSegment.detail of
-                    1 -> "an ascending passage"
-                    2 -> "a descending passage"
-                    3 -> "a twisting passage"
-                    4 -> "a forking passage"
-                    5 -> "an unstable passage"
-                    6 -> "an obstructed passage"
-                    _ -> "error"
-            in
-                [passageText]
-                
-        else if thisSegment.kind < 6 then
-            let
-                areaText =
-                    case thisSegment.detail of
-                        1 -> "a small area"
-                        2 -> "a big area"
-                        3 -> "a vast area"
-                        4 -> "a luxurious area"
-                        5 -> "a ruined area"
-                        6 -> "an eerie area"
-                        _ -> "error"
-                openingsText =
-                    if thisSegment.openings == 1 then "no"
-                    else if thisSegment.openings < 4 then "one"
-                    else if thisSegment.openings < 6 then "two"
-                    else "three or more"
-            in
-                [areaText
-                , ("beside the one you came in through there are " ++ openingsText ++ " other openings")
+--detailsRoll : SomePlace -> Random.Generator String
+segmentDescription : Model -> Random.Generator String
+segmentDescription model =
+    let
+        whatKind = (segmentAccess model).kind
+    in
+    case whatKind of
+        Passage ->
+            Random.uniform
+                {- ("Passage",  -}"an ascending passage"--)
+                [{- ("Passage",  -}"a descending passage"--)
+                , {- ("Passage",  -}"a twisting passage"--)
+                , {- ("Passage",  -}"a forking passage"--)
+                , {- ("Passage",  -}"an unstable passage"--)
+                , {- ("Passage",  -}"an obstructed passage"--)
                 ]
-        else
-            let
-                locationText =
-                    case thisSegment.detail of
-                        1 -> "a chance to get out"
-                        2 -> "a shot at the quest"
-                        3 -> "a great treasure"
-                        4 -> "a brush with evil"
-                        5 -> "?"
-                        6 -> "??"
-                        _ -> "error"
-            in
-                
-                [ ("a location that offers " ++ locationText)
-                , ("freely describe it as a Passage or Area that will suit the needs of this special place")
+        Area ->
+            Random.uniform
+                {- (Area,  -}"a small area"--)
+                [ {- (Area,  -}"a big area"--)
+                , {- (Area,  -}"a vast area"--)
+                , {- (Area,  -}"a luxurious area"--)
+                , {- (Area,  -}"a ruined area"--)
+                , {- (Area,  -}"an eerie area"--)
                 ]
+        Location ->
+            Random.uniform
+                {- (Location,  -}"a chance to get out"--)
+                [ {- (Location,  -}"a shot at the quest"--)
+                , {- (Location,  -}"a great treasure"--)
+                , {- (Location,  -}"a brush with evil"--)
+                , {- (Location,  -}"?a"--)
+                , {- (Location,  -}"?b"--)
+                ]
+
+openingsRoll : Random.Generator String
+openingsRoll =
+    Random.weighted
+    (1, "NO other")
+    [ (2, "ONE other")
+    , (2, "TWO other")
+    , (1, "MANY other")
+    ]
+    |> Random.map (\result -> "there seems to be " ++ result ++ " obvious openings in addition to the one from whence you came in")
+            
             
 
+        
+
+{- revealSomeplace : Model -> List String
+revealSomeplace model =
+    case model.segment of
+        Nothing -> ["No Segment"]
+        Just thisSegment ->
+            if thisSegment.kind < 4 then
+            let
+                passageText =
+                    case thisSegment.detail of
+                        1 -> "an ascending passage"
+                        2 -> "a descending passage"
+                        3 -> "a twisting passage"
+                        4 -> "a forking passage"
+                        5 -> "an unstable passage"
+                        6 -> "an obstructed passage"
+                        _ -> "error"
+                in
+                    [passageText]
+                    
+            else if thisSegment.kind < 6 then
+                let
+                    areaText =
+                        case thisSegment.detail of
+                            1 -> "a small area"
+                            2 -> "a big area"
+                            3 -> "a vast area"
+                            4 -> "a luxurious area"
+                            5 -> "a ruined area"
+                            6 -> "an eerie area"
+                            _ -> "error"
+                    openingsText =
+                        if thisSegment.openings == 1 then "no"
+                        else if thisSegment.openings < 4 then "one"
+                        else if thisSegment.openings < 6 then "two"
+                        else "three or more"
+                in
+                    [areaText
+                    , ("beside the one you came in through there are " ++ openingsText ++ " other openings")
+                    ]
+            else
+                let
+                    locationText =
+                        case thisSegment.detail of
+                            1 -> "a chance to get out"
+                            2 -> "a shot at the quest"
+                            3 -> "a great treasure"
+                            4 -> "a brush with evil"
+                            5 -> "?"
+                            6 -> "??"
+                            _ -> "error"
+                in
+                    
+                    [ ("a location that offers " ++ locationText)
+                    , ("freely describe it as a Passage or Area that will suit the needs of this special place")
+                    ]
+       
+ -}
 
 
     
@@ -337,7 +422,6 @@ statsRow model =
             [ text ("This is Round " ++ (String.fromInt model.roundCounter) )
             , el [] (text "")
             , text ("Discovery rating : " ++ (String.fromInt model.discoveryPoints) )
-            --, text ( model.dieRoll |> String.fromInt )
             ]
         ]
 
@@ -522,6 +606,7 @@ sitchRow model =
             model.activeAdvName
         activeMove =
             Tuple.second model.activeMove
+        mySegment = (segmentAccess model)
     in
     row
         [ centerX
@@ -534,11 +619,11 @@ sitchRow model =
                 [ Background.color (rgb255 211 211 211)
                 , padding 5
                 ]
-                [text "This segment is"]
+                [text "Segment elements :"]
 
             , column
                 []
-                (List.map bulletListBuilder model.somePlaceStatus)
+                (List.map bulletListBuilder (mySegment.description)  )
             , el [] (text "")
             , paragraph
                 [ Background.color (rgb255 211 211 211)
@@ -564,7 +649,17 @@ sitchRow model =
                 (playerPrompt model)
             ]
         ]
-        
+
+
+segmentAccess : Model ->  Segment
+segmentAccess model =
+    case model.segment of
+        Nothing ->
+            { kind = Area
+            , description = 0
+            , openings = 0
+            }
+        Just segment -> segment
 
 
 playerPrompt : Model -> List (Element Msg)
