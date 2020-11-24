@@ -38,6 +38,7 @@ type alias Model =
     , adventurers : Dict String Adventurer
     , activeAdvName : String
     , activeMove : (Maybe Move, String)
+    , previousMove : (Maybe Move, String)
     , segment : Maybe Segment
     }
 
@@ -80,6 +81,7 @@ initialModel =
             ]
     , activeAdvName = "Someone"
     , activeMove = (Nothing, "do something")
+    , previousMove = (Nothing, "do something")
     , segment = Just 
         { kind = Area
         , description = 0 --"a small space, simple and mostly empty, currently safe"
@@ -172,6 +174,7 @@ doOrientate model =
     , adventurers = updateAdvCanMove model
     , activeAdvName = initialModel.activeAdvName
     , activeMove = initialModel.activeMove
+    , previousMove = (Just Orientate, "Orientate")
     }
 
 doDelveAhead : Model -> Segment-> Model
@@ -182,6 +185,7 @@ doDelveAhead model nuSegment =
     , adventurers = updateAdvCanMove model
     , activeAdvName = initialModel.activeAdvName
     , activeMove = initialModel.activeMove
+    , previousMove = (Just DelveAhead, "DelveAhead")
     }
 
 discoveryUpdate : Model -> Int
@@ -224,10 +228,75 @@ kindRoll =
         [ (2, Area )
         , (1, Location )
         ]
-        --|> Random.andThen detailsRoll
 
---detailsRoll : SomePlace -> Random.Generator String
-segmentDescription : Model -> Random.Generator String
+segmentText : Model -> String
+segmentText model =
+    let
+        mySegment : Segment
+        mySegment = segmentAccess model
+    in
+    case mySegment.kind of
+        Passage ->
+            case mySegment.description of
+               1 -> "an ascending passage"
+               2 -> "a descending passage"
+               3 -> "a twisting passage"
+               4 -> "a forking passage"
+               5 -> "an unstable passage"
+               6 -> "an obstructed passage"
+               _ -> "Passage Error"
+        Area ->
+            case mySegment.description of
+               0 -> "a small space, mostly empty, currently safe"
+               1 -> "a small area"
+               2 -> "a big area"
+               3 -> "a vast area"
+               4 -> "a luxurious area"
+               5 -> "a ruined area"
+               6 -> "an eerie area"
+               _ -> "Area Error"
+        Location ->
+            case mySegment.description of
+               1 -> "a chance to get out"
+               2 -> "a shot at the quest"
+               3 -> "a great treasure"
+               4 -> "a brush with evil"
+               5 -> "?a"
+               6 -> "?b"
+               _ -> "Location Error"
+
+openingsText1 : Model -> String
+openingsText1 model =
+    let
+        mySegment : Segment
+        mySegment = segmentAccess model
+    in
+    case mySegment.openings of
+        0 -> "NO other"
+        1 -> "NO other"
+        2 -> "ONE other"
+        3 -> "ONE other"
+        4 -> "TWO other"
+        5 -> "TWO other"
+        6 -> "MANY other"
+        _ -> "Openings Error"
+
+openingsText2 : Model -> String
+openingsText2 model =
+    let
+        plural : Segment
+        plural = segmentAccess model
+    in
+    "there seems to be "
+    ++ openingsText1 model ++
+    " obvious opening"
+    ++ (if plural.openings > 3 then "s" else "") ++
+    " in addition to the one from whence you came in"
+
+
+
+
+{- segmentDescription : Model -> Random.Generator String
 segmentDescription model =
     let
         whatKind = (segmentAccess model).kind
@@ -260,8 +329,9 @@ segmentDescription model =
                 , {- (Location,  -}"?a"--)
                 , {- (Location,  -}"?b"--)
                 ]
+    -} 
 
-openingsRoll : Random.Generator String
+{- openingsRoll : Random.Generator String
 openingsRoll =
     Random.weighted
     (1, "NO other")
@@ -270,7 +340,7 @@ openingsRoll =
     , (1, "MANY other")
     ]
     |> Random.map (\result -> "there seems to be " ++ result ++ " obvious openings in addition to the one from whence you came in")
-            
+             -}
             
 
         
@@ -606,7 +676,10 @@ sitchRow model =
             model.activeAdvName
         activeMove =
             Tuple.second model.activeMove
-        mySegment = (segmentAccess model)
+        previousMove =
+            Tuple.first model.previousMove
+        mySegment = segmentText model
+        myOpenings = openingsText2 model
     in
     row
         [ centerX
@@ -619,11 +692,16 @@ sitchRow model =
                 [ Background.color (rgb255 211 211 211)
                 , padding 5
                 ]
-                [text "Segment elements :"]
+                [text (
+                    if previousMove == Just DelveAhead then "You find yourself in..."
+                    else "Current section elements:"
+                ) ]
 
             , column
                 []
-                (List.map bulletListBuilder (mySegment.description)  )
+                [ bulletListBuilder mySegment
+                , bulletListBuilder myOpenings
+                ]
             , el [] (text "")
             , paragraph
                 [ Background.color (rgb255 211 211 211)
@@ -632,7 +710,7 @@ sitchRow model =
 
             , column
                 []
-                (List.map bulletListBuilder model.someThingStatus)
+                [bulletListBuilder mySegment]
             ]
 
         , column (stdColumn ++ [width (fillPortion 1) ] )
