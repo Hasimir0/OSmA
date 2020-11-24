@@ -16,7 +16,8 @@ import Random exposing (generate)
 import Task
 import Maybe exposing (andThen)
 import Html.Attributes exposing (kind)
-
+import Dict
+import Tuple3 exposing (third)
 
 -- MAIN
 main : Program () Model Msg
@@ -84,8 +85,8 @@ initialModel =
     , previousMove = (Nothing, "do something")
     , segment = Just 
         { kind = Area
-        , description = 0 --"a small space, simple and mostly empty, currently safe"
-        , openings = 0 --"some openings :P"
+        , description = 0
+        , openings = 0
         }
     }
     
@@ -139,7 +140,7 @@ update msg model =
                         else (model, Cmd.none)
 
                     Just DelveAhead ->
-                        (model, rollDelveAhead)
+                        (model, rollDelveAhead model)
                 
                     Just GoWatchfully ->
                         (model, Cmd.none)
@@ -166,27 +167,28 @@ update msg model =
             ({model | activeMove = (Just move, name)} , Cmd.none)
 
 
+routineUpdates : Model -> Model
+routineUpdates model =
+    {model
+    | roundCounter = model.roundCounter +1
+    , adventurers = updateAdvCanMove model
+    , activeAdvName = initialModel.activeAdvName
+    , activeMove = initialModel.activeMove}
 
 doOrientate : Model -> Model
 doOrientate model =
     { model 
     | navPoints = model.navPoints +1
-    , adventurers = updateAdvCanMove model
-    , activeAdvName = initialModel.activeAdvName
-    , activeMove = initialModel.activeMove
     , previousMove = (Just Orientate, "Orientate")
-    }
+    } |> routineUpdates
 
 doDelveAhead : Model -> Segment-> Model
 doDelveAhead model nuSegment =
     { model 
     | segment = Just nuSegment
     , discoveryPoints = discoveryUpdate model
-    , adventurers = updateAdvCanMove model
-    , activeAdvName = initialModel.activeAdvName
-    , activeMove = initialModel.activeMove
     , previousMove = (Just DelveAhead, "DelveAhead")
-    }
+    } |> routineUpdates
 
 discoveryUpdate : Model -> Int
 discoveryUpdate model =
@@ -205,11 +207,11 @@ discoveryUpdate model =
 dieRoll : Random.Generator Int
 dieRoll = Random.int 1 6
 
-rollDelveAhead : Cmd Msg
-rollDelveAhead =
+rollDelveAhead : Model -> Cmd Msg
+rollDelveAhead model =
     Random.map3
             Segment
-            kindRoll
+            (kindRoll model)
             dieRoll
             dieRoll
     |>
@@ -221,12 +223,12 @@ type SomePlace
     | Area
     | Location
 
-kindRoll : Random.Generator SomePlace
-kindRoll = 
+kindRoll : Model -> Random.Generator SomePlace
+kindRoll model = 
     Random.weighted
         (3, Passage )
         [ (2, Area )
-        , (1, Location )
+        , ( (0+model.discoveryPoints |> toFloat) , Location )
         ]
 
 segmentText : Model -> String
@@ -295,144 +297,51 @@ openingsText2 model =
 
 
 
+toggleCanMove : Adventurer -> Adventurer
+toggleCanMove adventurer =
+  { adventurer | canMove = not adventurer.canMove }
 
-{- segmentDescription : Model -> Random.Generator String
-segmentDescription model =
-    let
-        whatKind = (segmentAccess model).kind
-    in
-    case whatKind of
-        Passage ->
-            Random.uniform
-                {- ("Passage",  -}"an ascending passage"--)
-                [{- ("Passage",  -}"a descending passage"--)
-                , {- ("Passage",  -}"a twisting passage"--)
-                , {- ("Passage",  -}"a forking passage"--)
-                , {- ("Passage",  -}"an unstable passage"--)
-                , {- ("Passage",  -}"an obstructed passage"--)
-                ]
-        Area ->
-            Random.uniform
-                {- (Area,  -}"a small area"--)
-                [ {- (Area,  -}"a big area"--)
-                , {- (Area,  -}"a vast area"--)
-                , {- (Area,  -}"a luxurious area"--)
-                , {- (Area,  -}"a ruined area"--)
-                , {- (Area,  -}"an eerie area"--)
-                ]
-        Location ->
-            Random.uniform
-                {- (Location,  -}"a chance to get out"--)
-                [ {- (Location,  -}"a shot at the quest"--)
-                , {- (Location,  -}"a great treasure"--)
-                , {- (Location,  -}"a brush with evil"--)
-                , {- (Location,  -}"?a"--)
-                , {- (Location,  -}"?b"--)
-                ]
-    -} 
-
-{- openingsRoll : Random.Generator String
-openingsRoll =
-    Random.weighted
-    (1, "NO other")
-    [ (2, "ONE other")
-    , (2, "TWO other")
-    , (1, "MANY other")
-    ]
-    |> Random.map (\result -> "there seems to be " ++ result ++ " obvious openings in addition to the one from whence you came in")
-             -}
-            
-
-        
-
-{- revealSomeplace : Model -> List String
-revealSomeplace model =
-    case model.segment of
-        Nothing -> ["No Segment"]
-        Just thisSegment ->
-            if thisSegment.kind < 4 then
-            let
-                passageText =
-                    case thisSegment.detail of
-                        1 -> "an ascending passage"
-                        2 -> "a descending passage"
-                        3 -> "a twisting passage"
-                        4 -> "a forking passage"
-                        5 -> "an unstable passage"
-                        6 -> "an obstructed passage"
-                        _ -> "error"
-                in
-                    [passageText]
-                    
-            else if thisSegment.kind < 6 then
-                let
-                    areaText =
-                        case thisSegment.detail of
-                            1 -> "a small area"
-                            2 -> "a big area"
-                            3 -> "a vast area"
-                            4 -> "a luxurious area"
-                            5 -> "a ruined area"
-                            6 -> "an eerie area"
-                            _ -> "error"
-                    openingsText =
-                        if thisSegment.openings == 1 then "no"
-                        else if thisSegment.openings < 4 then "one"
-                        else if thisSegment.openings < 6 then "two"
-                        else "three or more"
-                in
-                    [areaText
-                    , ("beside the one you came in through there are " ++ openingsText ++ " other openings")
-                    ]
-            else
-                let
-                    locationText =
-                        case thisSegment.detail of
-                            1 -> "a chance to get out"
-                            2 -> "a shot at the quest"
-                            3 -> "a great treasure"
-                            4 -> "a brush with evil"
-                            5 -> "?"
-                            6 -> "??"
-                            _ -> "error"
-                in
-                    
-                    [ ("a location that offers " ++ locationText)
-                    , ("freely describe it as a Passage or Area that will suit the needs of this special place")
-                    ]
-       
- -}
-
-
-    
-
-
-      
-
-
-
+  
 
 updateAdvCanMove : Model -> Dict String Adventurer
 updateAdvCanMove model =
+    let
+        --wholeDict = model.adventurers
+        allHaveMoved =
+            Dict.values model.adventurers
+            |> List.all (\adv -> adv.canMove == False)
+        --advsCanMoveStatus =
+        --    Dict.values (model.adventurers) |> List.map .canMove
+    in
+    if allHaveMoved then
+         Dict.map (always toggleCanMove) model.adventurers
+    else
+        Dict.update
+            model.activeAdvName
+            (\adv -> Maybe.map toggleCanMove adv)
+            model.adventurers
+        
+        -- (Maybe.map toggleCanMove) model.activeAdvName model.adventurers
+       
+    
+    
+
+{- changeCanMove model =
     let
         setCanMove : Bool -> Adventurer -> Adventurer
         setCanMove newCanMove adventurer =
             { adventurer | canMove = newCanMove }
     in
-        Dict.update
+    Dict.update
             model.activeAdvName
             (\maybeAdventurer ->
                 case maybeAdventurer of
                     Just adventurer ->
                         adventurer
-                            |> setCanMove False
+                            |> setCanMove (if adventurer.canMove == True then False else True)
                             |> Just
                     Nothing -> Nothing
-            ) model.adventurers
-    
-
-
-       
+            ) model.adventurers -}
 
 
 -- VIEW
