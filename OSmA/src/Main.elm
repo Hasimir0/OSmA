@@ -647,7 +647,13 @@ segmentAccess model =
 playerPrompt : Model -> List (Element Msg)
 playerPrompt model =
     if model.activeAdvName == "Someone" && model.activeMove == (Nothing, "do something")
-    then [paragraph [][text "Select an Adventurer and a Move."]]
+    then
+        if Dict.values model.adventurers
+            |> List.all (\adv -> adv.canMove == False)
+        then
+            enemyTasks
+        else
+            [paragraph [][text "Select an Adventurer and a Move."]]
     
     else if model.activeAdvName == "Someone"
     then [paragraph [][text "Select an Adventurer."]]
@@ -676,6 +682,18 @@ playerTaskStructure playerTaskOne playerTaskTwo =
     , el [] (text "")
     , otherButtons Confirm "Confirm?"
     ]
+
+
+
+enemyTasks : List (Element Msg)
+enemyTasks = 
+    let
+        ptOne = "Next, the Enemy will take their turn."
+        ptTwo = "Click the button when you are ready!"
+    in
+        playerTaskStructure ptOne ptTwo
+
+
 
 playerTasks : Model -> List (Element Msg)
 playerTasks model =
@@ -749,13 +767,6 @@ playerTasks model =
                 ptTwo = "Others can be with you, if they want, but they'll share the risks."
             in
                 playerTaskStructure ptOne ptTwo
-
-        {- Just EnemyMove ->
-            let
-                ptOne = "Next, the Enemy will take their turn."
-                ptTwo = "Click the button when you are ready!"
-            in
-                playerTaskStructure ptOne ptTwo -}
 
         Nothing ->
             [paragraph
