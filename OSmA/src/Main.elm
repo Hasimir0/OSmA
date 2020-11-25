@@ -97,6 +97,7 @@ type Msg =
     | ActivateAdv Adventurer
     | MenuAction
     | Confirm
+    | EnemyTurn
     | SetMove (Move, String)
     | SegmentRolls Segment
 
@@ -127,7 +128,18 @@ update msg model =
             case adv.canMove of
                 True -> ({model | activeAdvName = adv.name } , Cmd.none)
                 False -> ({model | activeAdvName = "Someone"} , Cmd.none)
-                    
+        
+        SetMove (move, name) ->
+            let
+                allHaveMoved =
+                    Dict.values model.adventurers
+                    |> List.all (\adv -> adv.canMove == False)
+            in
+            if allHaveMoved then
+                (model, Cmd.none)
+            else
+            ({model | activeMove = (Just move, name)} , Cmd.none)
+        
         Confirm  ->
             if model.activeAdvName == "Someone"
             then (model, Cmd.none)
@@ -163,8 +175,9 @@ update msg model =
             
         MenuAction ->
             (model, Cmd.none)
-        SetMove (move, name) ->
-            ({model | activeMove = (Just move, name)} , Cmd.none)
+        
+        EnemyTurn ->
+            (model, Cmd.none)
 
 
 routineUpdates : Model -> Model
@@ -306,12 +319,9 @@ toggleCanMove adventurer =
 updateAdvCanMove : Model -> Dict String Adventurer
 updateAdvCanMove model =
     let
-        --wholeDict = model.adventurers
         allHaveMoved =
             Dict.values model.adventurers
             |> List.all (\adv -> adv.canMove == False)
-        --advsCanMoveStatus =
-        --    Dict.values (model.adventurers) |> List.map .canMove
     in
     if allHaveMoved then
          Dict.map (always toggleCanMove) model.adventurers
@@ -321,27 +331,12 @@ updateAdvCanMove model =
             (\adv -> Maybe.map toggleCanMove adv)
             model.adventurers
         
-        -- (Maybe.map toggleCanMove) model.activeAdvName model.adventurers
+        
        
     
     
 
-{- changeCanMove model =
-    let
-        setCanMove : Bool -> Adventurer -> Adventurer
-        setCanMove newCanMove adventurer =
-            { adventurer | canMove = newCanMove }
-    in
-    Dict.update
-            model.activeAdvName
-            (\maybeAdventurer ->
-                case maybeAdventurer of
-                    Just adventurer ->
-                        adventurer
-                            |> setCanMove (if adventurer.canMove == True then False else True)
-                            |> Just
-                    Nothing -> Nothing
-            ) model.adventurers -}
+
 
 
 -- VIEW
@@ -356,7 +351,7 @@ view model =
                 , Border.width 1
                 , padding 10
                 , spacing 30
-                , width (px 800)
+                , width fill
                 ]
                 [ menuRow
                 , promptRow
@@ -369,7 +364,7 @@ view model =
                 , Border.width 1
                 , padding 10
                 , spacing 30
-                , width (px 800)
+                , width fill
                 , height fill
                 ]
                 [ statsRow model
@@ -488,7 +483,7 @@ movesRow model =
                 , paragraph ( stdColumn ++ 
                     [ Font.bold
                     , Font.italic ] )
-                    [ moveButtons (Orientate, "Orientate")
+                    [ moveButtons model (Orientate, "Orientate")
                     ]
                 , paragraph stdColumn
                     [ text "When you spend time consulting your maps and making sense of the area’s layout..."]
@@ -496,14 +491,14 @@ movesRow model =
                 , text ""
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [moveButtons (DelveAhead, "Delve Ahead")]
+                    [moveButtons model (DelveAhead, "Delve Ahead")]
                 , paragraph stdColumn
                     [ text "When you step into a new section hastily, carelessly or blindly..." ]
                 
                 , text ""
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [moveButtons (GoWatchfully, "Go Watchfully")]
+                    [moveButtons model (GoWatchfully, "Go Watchfully")]
                 , paragraph stdColumn
                     [ text "When you step into a new section slowly and carefully..." ]
                 
@@ -516,7 +511,7 @@ movesRow model =
                     , padding 10] (text "SEARCH" )
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [ moveButtons (Forage, "Forage")
+                    [ moveButtons model (Forage, "Forage")
                     ]
                 , paragraph stdColumn
                     [ text "When you spend time looking around to find something you need..."]
@@ -524,7 +519,7 @@ movesRow model =
                 , text ""
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [ moveButtons (Prod, "Prod")
+                    [ moveButtons model (Prod, "Prod")
                     ]
                 , paragraph stdColumn
                     [ text "When you manipulate or get very close to something specific in the current segment..." ]
@@ -532,7 +527,7 @@ movesRow model =
                 , text ""
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [ moveButtons (Inspect, "Inspect")
+                    [ moveButtons model (Inspect, "Inspect")
                     ]
                 , paragraph stdColumn
                     [ text "When you investigate something specific within the current segment with great caution or from a moderate distance..." ]
@@ -546,7 +541,7 @@ movesRow model =
                     , padding 10] (text "OVEWRCOME" )
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [ moveButtons (TakeaRisk, "Take a Risk")
+                    [ moveButtons model (TakeaRisk, "Take a Risk")
                     ]
                 , paragraph stdColumn
                     [ text "When you try to overcome an obstacle with your own direct actions..."]
@@ -554,7 +549,7 @@ movesRow model =
                 , text ""
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [ moveButtons (UseIngenuity, "Use Ingenuity")
+                    [ moveButtons model (UseIngenuity, "Use Ingenuity")
                     ]
                 , paragraph stdColumn
                     [ text "When you try to build, repair, craft or produce a thing..." ]
@@ -562,7 +557,7 @@ movesRow model =
                 , text ""
 
                 , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [ moveButtons (Fight, "Fight")
+                    [ moveButtons model (Fight, "Fight")
                     ]
                 , paragraph stdColumn
                     [ text "When you fight a dangerous opponent..." ]
@@ -632,7 +627,7 @@ sitchRow model =
                 ]
             , el [] (text "")
             , column
-                []
+                [spacing 10]
                 (playerPrompt model)
             ]
         ]
@@ -755,6 +750,13 @@ playerTasks model =
             in
                 playerTaskStructure ptOne ptTwo
 
+        {- Just EnemyMove ->
+            let
+                ptOne = "Next, the Enemy will take their turn."
+                ptTwo = "Click the button when you are ready!"
+            in
+                playerTaskStructure ptOne ptTwo -}
+
         Nothing ->
             [paragraph
                 []
@@ -779,7 +781,6 @@ bearingsText model =
     in
         [ paragraph []
             [ text navStatus ]
-        --, el [] ( text "")
         , paragraph []
             [ text ( "The next Delve or Go Watchfully will be " ++ navQuality ++ " improved." ) ]
         ]
@@ -812,8 +813,8 @@ advButtonOverColor adv =
 
 
 
-moveButtons : (Move, String) -> Element Msg
-moveButtons (move, label) =
+moveButtons : Model -> (Move, String) -> Element Msg
+moveButtons model (move, label) =
     el
         [ Border.solid
         , Border.color (rgb255 0 0 0)
@@ -821,13 +822,36 @@ moveButtons (move, label) =
         , Border.rounded 10
         , padding 5
         , centerX
-        , mouseOver [ Background.color (rgb255 0 255 0) ]
+        , mouseOver [ moveButtonsMouseover model ]
         ]
         (Input.button []
             { onPress = Just (SetMove (move, label) )
             , label = text label
             }
         )
+
+moveButtonsMouseover : Model -> Attr decorative msg
+moveButtonsMouseover model =
+    let
+        allHaveMoved =
+            Dict.values model.adventurers
+            |> List.all (\adv -> adv.canMove == False)
+    in
+        if allHaveMoved then
+            Background.color (rgb255 255 0 0)
+        else
+            Background.color (rgb255 0 255 0)
+
+
+buttonSwitch : Model -> Element Msg
+buttonSwitch model =
+    if
+        Dict.values model.adventurers
+        |> List.all (\adv -> adv.canMove == False)
+    then
+        otherButtons EnemyTurn "Enemy Turn"
+    else
+        otherButtons Confirm "Confirm?"
 
 otherButtons : Msg -> String -> Element Msg
 otherButtons msg name =
