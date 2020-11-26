@@ -168,7 +168,7 @@ update msg model =
                     (model, Cmd.none)
                 
                 Just EnemyMove ->
-                    (model, Cmd.none)
+                    (doEnemyMove model, Cmd.none)
                 
                 Nothing ->
                     (model, Cmd.none)
@@ -219,6 +219,7 @@ doDelveAhead model nuSegment =
     , discoveryPoints = discoveryUpdate model
     , previousMove = (Just DelveAhead, "DelveAhead")
     } |> routineUpdates
+
 
 discoveryUpdate : Model -> Int
 discoveryUpdate model =
@@ -347,11 +348,25 @@ updateAdvCanMove model =
             model.activeAdvName
             (\adv -> Maybe.map toggleCanMove adv)
             model.adventurers
-        
-        
-       
-    
-    
+
+
+doEnemyMove : Model -> Model
+doEnemyMove model = 
+    { model
+    | adventurers = updateAdvCanMove model
+    }
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
