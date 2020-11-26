@@ -19,6 +19,8 @@ import Html.Attributes exposing (kind)
 import Dict
 import Tuple3 exposing (third)
 
+
+
 -- MAIN
 main : Program () Model Msg
 main =
@@ -28,6 +30,13 @@ main =
         , subscriptions = subscriptions
         , view = view
         }
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  Sub.none
+
+
+
 
 
 
@@ -41,6 +50,7 @@ type alias Model =
     , activeMove : (Maybe Move, String)
     , previousMove : (Maybe Move, String)
     , segment : Maybe Segment
+    , pastLocations : List Int
     }
 
 type alias Adventurer =
@@ -66,6 +76,14 @@ type Move
     | Fight
     | EnemyMove
 
+type SomePlace
+    = Passage
+    | Area
+    | Location
+
+
+
+
 init : () -> (Model, Cmd Msg)
 init _ =
     (initialModel, Cmd.none)
@@ -89,8 +107,9 @@ initialModel =
         , description = 0
         , openings = 0
         }
+    , pastLocations = [0]
     }
-    
+
 
 
 type Msg =
@@ -101,12 +120,6 @@ type Msg =
     --| EnemyTurn
     | SetMove (Move, String)
     | SegmentRolls Segment
-
-
-
-subscriptions : Model -> Sub Msg
-subscriptions model =
-  Sub.none
 
 
 
@@ -183,6 +196,7 @@ update msg model =
             (model, Cmd.none) -}
 
 
+
 routineUpdates : Model -> Model
 routineUpdates model =
     let
@@ -195,13 +209,36 @@ routineUpdates model =
             , activeMove = initialModel.activeMove
             }
     in
-        if
-            Dict.values nuModel.adventurers
+    if
+        Dict.values nuModel.adventurers
+        |> List.all (\adv -> adv.canMove == False)
+    then
+        { nuModel| activeMove = (Just EnemyMove, "perforn an Enemy Move") }
+    else
+        nuModel
+
+
+
+toggleCanMove : Adventurer -> Adventurer
+toggleCanMove adventurer =
+  { adventurer | canMove = not adventurer.canMove }
+
+  
+
+updateAdvCanMove : Model -> Dict String Adventurer
+updateAdvCanMove model =
+    let
+        allHaveMoved =
+            Dict.values model.adventurers
             |> List.all (\adv -> adv.canMove == False)
-        then
-            { nuModel| activeMove = (Just EnemyMove, "perforn an Enemy Move") }
-        else
-            nuModel
+    in
+    if allHaveMoved then
+         Dict.map (always toggleCanMove) model.adventurers
+    else
+        Dict.update
+            model.activeAdvName
+            (\adv -> Maybe.map toggleCanMove adv)
+            model.adventurers
 
 
 
@@ -212,6 +249,8 @@ doOrientate model =
     , previousMove = (Just Orientate, "Orientate")
     } |> routineUpdates
 
+
+
 doDelveAhead : Model -> Segment-> Model
 doDelveAhead model nuSegment =
     { model 
@@ -219,6 +258,7 @@ doDelveAhead model nuSegment =
     , discoveryPoints = discoveryUpdate model
     , previousMove = (Just DelveAhead, "DelveAhead")
     } |> routineUpdates
+
 
 
 discoveryUpdate : Model -> Int
@@ -230,13 +270,13 @@ discoveryUpdate model =
                Location -> 0
                Passage -> model.discoveryPoints + 1
                Area -> model.discoveryPoints + 1
-            
-
 
 
 
 dieRoll : Random.Generator Int
 dieRoll = Random.int 1 6
+
+
 
 rollDelveAhead : Model -> Cmd Msg
 rollDelveAhead model =
@@ -247,12 +287,8 @@ rollDelveAhead model =
             dieRoll
     |>
     Random.generate SegmentRolls
-        
 
-type SomePlace
-    = Passage
-    | Area
-    | Location
+
 
 kindRoll : Model -> Random.Generator SomePlace
 kindRoll model = 
@@ -261,6 +297,8 @@ kindRoll model =
         [ (2, Area )
         , ( (0+model.discoveryPoints |> toFloat) , Location )
         ]
+
+
 
 segmentText : Model -> String
 segmentText model =
@@ -298,6 +336,20 @@ segmentText model =
                6 -> "?b"
                _ -> "Location Error"
 
+
+
+segmentAccess : Model ->  Segment
+segmentAccess model =
+    case model.segment of
+        Nothing ->
+            { kind = Area
+            , description = 0
+            , openings = 0
+            }
+        Just segment -> segment
+
+
+
 openingsText1 : Model -> String
 openingsText1 model =
     let
@@ -314,6 +366,8 @@ openingsText1 model =
         6 -> "MANY other"
         _ -> "Openings Error"
 
+
+
 openingsText2 : Model -> String
 openingsText2 model =
     let
@@ -328,33 +382,16 @@ openingsText2 model =
 
 
 
-toggleCanMove : Adventurer -> Adventurer
-toggleCanMove adventurer =
-  { adventurer | canMove = not adventurer.canMove }
-
-  
-
-updateAdvCanMove : Model -> Dict String Adventurer
-updateAdvCanMove model =
-    let
-        allHaveMoved =
-            Dict.values model.adventurers
-            |> List.all (\adv -> adv.canMove == False)
-    in
-    if allHaveMoved then
-         Dict.map (always toggleCanMove) model.adventurers
-    else
-        Dict.update
-            model.activeAdvName
-            (\adv -> Maybe.map toggleCanMove adv)
-            model.adventurers
-
-
 doEnemyMove : Model -> Model
 doEnemyMove model = 
     { model
     | adventurers = updateAdvCanMove model
+    , activeMove = initialModel.activeMove
     }
+
+
+
+
 
 
 
@@ -386,9 +423,9 @@ view model =
                 , width fill
                 ]
                 [ menuRow
-                , promptRow
-                , selectionRow model
-                , movesRow model
+                , basicInstructionsRow
+                , advSelectionRow model
+                , moveSelectionRow model
                 ]
             , column
                 [ centerX
@@ -404,6 +441,172 @@ view model =
                 ]
             ]
         )
+
+
+
+stdColumn : List (Attribute msg)
+stdColumn  =
+    [ width (fillPortion 1)
+    , padding 10
+    , spacing 10
+    , Background.color (rgb255 180 180 180)
+    , height fill
+    , Font.justify
+    ]
+
+
+
+menuRow : Element Msg
+menuRow =
+    row
+        [ spacing 10
+        , centerX
+        ]
+        [ otherButtons MenuAction "Adventurer Sheets"
+        , otherButtons MenuAction "Rules Summary"
+        , otherButtons MenuAction "Save & Exit"
+        ]
+
+
+
+basicInstructionsRow : Element msg
+basicInstructionsRow =
+    row
+        []
+        [ paragraph
+            []
+            [ el [Font.bold] (text "1. ")
+            , text "Freely describe what your Adventurer is doing. When this description matches a Move, do the Move." ]
+        ]
+
+
+
+advSelectionRow : Model -> Element Msg
+advSelectionRow model =
+    row
+        [ width fill, spacing 30 ]
+        [ column
+            [ width (fillPortion 1), height fill]
+            [ paragraph
+                []
+                [ el [Font.bold] (text "2. ")
+                , text "Who is making a Move?"
+                ]
+            , el [Font.italic, centerX] (text "(select just one)")
+            ]
+        , column
+            [ width (fillPortion 2), spacing 15 ]
+            ( Dict.map advButtons model.adventurers
+            |> Dict.values
+            )
+        ]
+
+    
+
+moveSelectionRow : Model -> Element Msg
+moveSelectionRow model =
+    column
+        []
+        [ paragraph
+                    []
+                    [ el [Font.bold] (text "3. ")
+                    , text "Which Move is being made?"]
+    
+        , row
+            [ padding 10
+            , spacing 30
+            , width fill
+            ]
+            [ column [width (fillPortion 1)]
+                [ el
+                    [centerX
+                    , Font.bold
+                    , padding 10] (text "NAVIGATE" )
+
+                , paragraph ( stdColumn ++ 
+                    [ Font.bold
+                    , Font.italic ] )
+                    [ moveButtons model (Orientate, "Orientate")
+                    ]
+                , paragraph stdColumn
+                    [ text "When you spend time consulting your maps and making sense of the area’s layout..."]
+                
+                , text "|"
+                
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [moveButtons model (DelveAhead, "Delve Ahead")]
+                , paragraph stdColumn
+                    [ text "When you step into a new section hastily, carelessly or blindly..." ]
+                
+                , text "|"
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [moveButtons model (GoWatchfully, "Go Watchfully")]
+                , paragraph stdColumn
+                    [ text "When you step into a new section slowly and carefully..." ]
+                
+                ]
+
+            , column [width (fillPortion 1)]
+                [ el
+                    [centerX
+                    , Font.bold
+                    , padding 10] (text "SEARCH" )
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [ moveButtons model (Forage, "Forage")
+                    ]
+                , paragraph stdColumn
+                    [ text "When you spend time looking around to find something you need..."]
+                
+                , text "|"
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [ moveButtons model (Prod, "Prod")
+                    ]
+                , paragraph stdColumn
+                    [ text "When you manipulate or get very close to something specific in the current segment..." ]
+                
+                , text "|"
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [ moveButtons model (Inspect, "Inspect")
+                    ]
+                , paragraph stdColumn
+                    [ text "When you investigate something specific within the current segment with great caution or from a moderate distance..." ]
+                ]
+
+            , column [width (fillPortion 1)]
+                [ el
+                    [centerX
+                    , Font.bold
+                    , padding 10] (text "OVEWRCOME" )
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [ moveButtons model (TakeaRisk, "Take a Risk")
+                    ]
+                , paragraph stdColumn
+                    [ text "When you try to overcome an obstacle with your own direct actions..."]
+                
+                , text "|"
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [ moveButtons model (UseIngenuity, "Use Ingenuity")
+                    ]
+                , paragraph stdColumn
+                    [ text "When you try to build, repair, craft or produce a thing..." ]
+                
+                , text "|"
+
+                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                    [ moveButtons model (Fight, "Fight")
+                    ]
+                , paragraph stdColumn
+                    [ text "When you fight a dangerous opponent..." ]
+                ]
+            ]
+        ]
 
 
 
@@ -431,178 +634,6 @@ statsRow model =
             ]
         ]
 
-
-stdColumn : List (Attribute msg)
-stdColumn  =
-    [ width (fillPortion 1)
-    , padding 10
-    , spacing 10
-    , Background.color (rgb255 180 180 180)
-    , height fill
-    , Font.justify
-    ]
-
-
-menuRow : Element Msg
-menuRow =
-    row
-        [ spacing 10
-        , centerX
-        ]
-        [ otherButtons MenuAction "Adventurer Sheets"
-        , otherButtons MenuAction "Rules Summary"
-        , otherButtons MenuAction "Save & Exit"
-        ]
-
-
-promptRow : Element msg
-promptRow =
-    row
-        []
-        [ paragraph
-            []
-            [ el [Font.bold] (text "1. ")
-            , text "Freely describe what your Adventurer is doing. When this description matches a Move, do the Move." ]
-        ]
-
-
-selectionRow : Model -> Element Msg
-selectionRow model =
-    row
-        [ width fill, spacing 30 ]
-        [ column
-            [ width (fillPortion 1), height fill]
-            [ paragraph
-                []
-                [ el [Font.bold] (text "2. ")
-                , text "Who is making a Move?"
-                ]
-            , el [Font.italic, centerX] (text "(select just one)")
-            ]
-        , column
-            [ width (fillPortion 2), spacing 15 ]
-            ( Dict.map advButtons model.adventurers
-            |> Dict.values
-            )
-        ]
-
-
-listOfAdv : { a | adventurers : Dict k v } -> List (k, v)
-listOfAdv model =
-    Dict.toList model.adventurers
-    
-
-movesRow : Model -> Element Msg
-movesRow model =
-    column
-        []
-        [ paragraph
-                    []
-                    [ el [Font.bold] (text "3. ")
-                    , text "Which Move is being made?"]
-    
-        , row
-            [ padding 10
-            , spacing 30
-            , width fill
-            ]
-            [ column [width (fillPortion 1)]
-                [ el
-                    [centerX
-                    , Font.bold
-                    , padding 10] (text "NAVIGATE" )
-
-                , paragraph ( stdColumn ++ 
-                    [ Font.bold
-                    , Font.italic ] )
-                    [ moveButtons model (Orientate, "Orientate")
-                    ]
-                , paragraph stdColumn
-                    [ text "When you spend time consulting your maps and making sense of the area’s layout..."]
-                
-                , text ""
-
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [moveButtons model (DelveAhead, "Delve Ahead")]
-                , paragraph stdColumn
-                    [ text "When you step into a new section hastily, carelessly or blindly..." ]
-                
-                , text ""
-
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [moveButtons model (GoWatchfully, "Go Watchfully")]
-                , paragraph stdColumn
-                    [ text "When you step into a new section slowly and carefully..." ]
-                
-                ]
-
-            , column [width (fillPortion 1)]
-                [ el
-                    [centerX
-                    , Font.bold
-                    , padding 10] (text "SEARCH" )
-
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [ moveButtons model (Forage, "Forage")
-                    ]
-                , paragraph stdColumn
-                    [ text "When you spend time looking around to find something you need..."]
-                
-                , text ""
-
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [ moveButtons model (Prod, "Prod")
-                    ]
-                , paragraph stdColumn
-                    [ text "When you manipulate or get very close to something specific in the current segment..." ]
-                
-                , text ""
-
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [ moveButtons model (Inspect, "Inspect")
-                    ]
-                , paragraph stdColumn
-                    [ text "When you investigate something specific within the current segment with great caution or from a moderate distance..." ]
-                
-                ]
-
-            , column [width (fillPortion 1)]
-                [ el
-                    [centerX
-                    , Font.bold
-                    , padding 10] (text "OVEWRCOME" )
-
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [ moveButtons model (TakeaRisk, "Take a Risk")
-                    ]
-                , paragraph stdColumn
-                    [ text "When you try to overcome an obstacle with your own direct actions..."]
-                
-                , text ""
-
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [ moveButtons model (UseIngenuity, "Use Ingenuity")
-                    ]
-                , paragraph stdColumn
-                    [ text "When you try to build, repair, craft or produce a thing..." ]
-                
-                , text ""
-
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [ moveButtons model (Fight, "Fight")
-                    ]
-                , paragraph stdColumn
-                    [ text "When you fight a dangerous opponent..." ]
-                ]
-            ]
-        ]
-
-
-
-
-bulletListBuilder : String -> Element msg
-bulletListBuilder myList =
-    el [] ( paragraph [padding 5, spacing 5] [text ("+ " ++ myList) ] )
 
 
 sitchRow : Model -> Element Msg
@@ -665,15 +696,11 @@ sitchRow model =
         ]
 
 
-segmentAccess : Model ->  Segment
-segmentAccess model =
-    case model.segment of
-        Nothing ->
-            { kind = Area
-            , description = 0
-            , openings = 0
-            }
-        Just segment -> segment
+
+bulletListBuilder : String -> Element msg
+bulletListBuilder myList =
+    el [] ( paragraph [padding 5, spacing 5] [text ("+ " ++ myList) ] )
+
 
 
 playerPrompt : Model -> List (Element Msg)
@@ -692,43 +719,6 @@ playerPrompt model =
     then [paragraph [][text "Select a Move."]]
 
     else playerTasks model
-
-
-playerTaskStructure : Model -> String -> String -> List (Element Msg)
-playerTaskStructure model playerTaskOne playerTaskTwo =
-    [el [] 
-        ( paragraph
-            [ Background.color (rgb255 200 200 200)
-            , padding 5]
-            [ text playerTaskOne ]
-        )
-    , el [] (text "")
-    , el [] 
-        (paragraph
-            [ Background.color (rgb255 200 200 200)
-            , padding 5]
-            [ text playerTaskTwo ]
-        )
-    , el [] (text "")
-    , --otherButtons Confirm "Confirm?"
-    buttonSwitch model
-    ]
-
-
-
-buttonSwitch : Model -> Element Msg
-buttonSwitch model =
-    if
-        Dict.values model.adventurers
-        |> List.all (\adv -> adv.canMove == False)
-    then
-        otherButtons Confirm "Enemy Turn"
-    else
-        otherButtons Confirm "Confirm?"
-
-
-
-
 
 
 
@@ -800,6 +790,39 @@ playerTasks model =
 
 
 
+playerTaskStructure : Model -> String -> String -> List (Element Msg)
+playerTaskStructure model playerTaskOne playerTaskTwo =
+    [el [] 
+        ( paragraph
+            [ Background.color (rgb255 200 200 200)
+            , padding 5]
+            [ text playerTaskOne ]
+        )
+    , el [] (text "")
+    , el [] 
+        (paragraph
+            [ Background.color (rgb255 200 200 200)
+            , padding 5]
+            [ text playerTaskTwo ]
+        )
+    , el [] (text "")
+    , --otherButtons Confirm "Confirm?"
+    buttonSwitch model
+    ]
+
+
+
+buttonSwitch : Model -> Element Msg
+buttonSwitch model =
+    if
+        Dict.values model.adventurers
+        |> List.all (\adv -> adv.canMove == False)
+    then
+        otherButtons Confirm "Enemy Turn"
+    else
+        otherButtons Confirm "Confirm?"
+
+
 
 bearingsText : Model -> List (Element msg)
 bearingsText model = 
@@ -822,6 +845,8 @@ bearingsText model =
         , paragraph []
             [ text ( "The next Delve or Go Watchfully will be " ++ navQuality ++ " improved." ) ]
         ]
+
+
 
 advButtons : String -> Adventurer -> Element Msg
 advButtons key adv =
@@ -849,8 +874,6 @@ advButtonOverColor adv =
 
 
 
-
-
 moveButtons : Model -> (Move, String) -> Element Msg
 moveButtons model (move, label) =
     el
@@ -868,6 +891,8 @@ moveButtons model (move, label) =
             }
         )
 
+
+
 moveButtonsMouseover : Model -> Attr decorative msg
 moveButtonsMouseover model =
     let
@@ -879,7 +904,6 @@ moveButtonsMouseover model =
             Background.color (rgb255 255 0 0)
         else
             Background.color (rgb255 0 255 0)
-
 
 
 
@@ -899,6 +923,3 @@ otherButtons msg name =
             , label = text name
             }
         )
-
-
- 
