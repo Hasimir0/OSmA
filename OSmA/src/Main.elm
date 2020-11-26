@@ -64,6 +64,7 @@ type Move
     | TakeaRisk
     | UseIngenuity
     | Fight
+    | EnemyMove
 
 init : () -> (Model, Cmd Msg)
 init _ =
@@ -97,7 +98,7 @@ type Msg =
     | ActivateAdv Adventurer
     | MenuAction
     | Confirm
-    | EnemyTurn
+    --| EnemyTurn
     | SetMove (Move, String)
     | SegmentRolls Segment
 
@@ -141,52 +142,68 @@ update msg model =
             ({model | activeMove = (Just move, name)} , Cmd.none)
         
         Confirm  ->
-            if model.activeAdvName == "Someone"
-            then (model, Cmd.none)
-            else
-                case Tuple.first model.activeMove of
+            case Tuple.first model.activeMove of
 
-                    Just Orientate -> -- Move type, not Msg type
-                        if model.navPoints < 3
-                        then (doOrientate model, Cmd.none)
-                        else (model, Cmd.none)
+                Just Orientate -> -- Move type, not Msg type
+                    if model.navPoints < 3
+                    then (doOrientate model, Cmd.none)
+                    else (model, Cmd.none)
 
-                    Just DelveAhead ->
-                        (model, rollDelveAhead model)
+                Just DelveAhead ->
+                    (model, rollDelveAhead model)
+            
+                Just GoWatchfully ->
+                    (model, Cmd.none)
+                Just Forage ->
+                    (model, Cmd.none)
+                Just Prod ->
+                    (model, Cmd.none)
+                Just Inspect ->
+                    (model, Cmd.none)
+                Just TakeaRisk ->
+                    (model, Cmd.none)
+                Just UseIngenuity ->
+                    (model, Cmd.none)
+                Just Fight ->
+                    (model, Cmd.none)
                 
-                    Just GoWatchfully ->
-                        (model, Cmd.none)
-                    Just Forage ->
-                        (model, Cmd.none)
-                    Just Prod ->
-                        (model, Cmd.none)
-                    Just Inspect ->
-                        (model, Cmd.none)
-                    Just TakeaRisk ->
-                        (model, Cmd.none)
-                    Just UseIngenuity ->
-                        (model, Cmd.none)
-                    Just Fight ->
-                        (model, Cmd.none)
-                    Nothing ->
-                        (model, Cmd.none)
+                Just EnemyMove ->
+                    (model, Cmd.none)
+                
+                Nothing ->
+                    (model, Cmd.none)
+
         SegmentRolls nuSegment ->
             (doDelveAhead model nuSegment, Cmd.none)
             
         MenuAction ->
             (model, Cmd.none)
         
-        EnemyTurn ->
-            (model, Cmd.none)
+        {- EnemyTurn ->
+            (model, Cmd.none) -}
 
 
 routineUpdates : Model -> Model
 routineUpdates model =
-    {model
-    | roundCounter = model.roundCounter +1
-    , adventurers = updateAdvCanMove model
-    , activeAdvName = initialModel.activeAdvName
-    , activeMove = initialModel.activeMove}
+    let
+        nuModel : Model
+        nuModel =
+            {model
+            | roundCounter = model.roundCounter +1
+            , adventurers = updateAdvCanMove model
+            , activeAdvName = initialModel.activeAdvName
+            , activeMove = initialModel.activeMove
+            }
+    in
+        if
+            Dict.values nuModel.adventurers
+            |> List.all (\adv -> adv.canMove == False)
+        then
+            { nuModel| activeMove = (Just EnemyMove, "perforn an Enemy Move") }
+        else
+            nuModel
+
+
 
 doOrientate : Model -> Model
 doOrientate model =
@@ -648,24 +665,22 @@ playerPrompt : Model -> List (Element Msg)
 playerPrompt model =
     if model.activeAdvName == "Someone" && model.activeMove == (Nothing, "do something")
     then
-        if Dict.values model.adventurers
-            |> List.all (\adv -> adv.canMove == False)
-        then
-            enemyTasks
-        else
-            [paragraph [][text "Select an Adventurer and a Move."]]
+        [paragraph [][text "Select an Adventurer and a Move."]]
     
     else if model.activeAdvName == "Someone"
-    then [paragraph [][text "Select an Adventurer."]]
+    then
+        if Tuple.first model.activeMove == Just EnemyMove
+        then playerTasks model
+        else [paragraph [][text "Select an Adventurer."]]
     
     else if model.activeMove == (Nothing,"do something")
     then [paragraph [][text "Select a Move."]]
-    
+
     else playerTasks model
 
 
-playerTaskStructure : String -> String -> List (Element Msg)
-playerTaskStructure playerTaskOne playerTaskTwo =
+playerTaskStructure : Model -> String -> String -> List (Element Msg)
+playerTaskStructure model playerTaskOne playerTaskTwo =
     [el [] 
         ( paragraph
             [ Background.color (rgb255 200 200 200)
@@ -680,99 +695,96 @@ playerTaskStructure playerTaskOne playerTaskTwo =
             [ text playerTaskTwo ]
         )
     , el [] (text "")
-    , otherButtons Confirm "Confirm?"
+    , --otherButtons Confirm "Confirm?"
+    buttonSwitch model
     ]
 
 
 
-enemyTasks : List (Element Msg)
-enemyTasks = 
-    let
-        ptOne = "Next, the Enemy will take their turn."
-        ptTwo = "Click the button when you are ready!"
-    in
-        playerTaskStructure ptOne ptTwo
+buttonSwitch : Model -> Element Msg
+buttonSwitch model =
+    if
+        Dict.values model.adventurers
+        |> List.all (\adv -> adv.canMove == False)
+    then
+        otherButtons Confirm "Enemy Turn"
+    else
+        otherButtons Confirm "Confirm?"
+
+
+
+
 
 
 
 playerTasks : Model -> List (Element Msg)
 playerTasks model =
-    case Tuple.first model.activeMove of
+    let
+        switch =
+            case Tuple.first model.activeMove of
 
-        Just Orientate ->
-            let
-                ptOne = "...say where you think you should go next, and explain why you think so."
-                ptTwo =
-                    ( "You get your bearings. (max. "
-                    ++
-                    ( 3 - model.navPoints |> String.fromInt )
-                    ++
-                    " times)"
+                Just Orientate ->
+                    ( "...say where you think you should go next, and explain why you think so."
+                    , ( "You get your bearings. (max. "
+                        ++
+                        ( 3 - model.navPoints |> String.fromInt )
+                        ++
+                        " times)"
+                        )
                     )
-            in
-                playerTaskStructure ptOne ptTwo
-           
-        Just DelveAhead ->
-            let
-                ptOne = "...you are already INSIDE the new section!"
-                ptTwo = "Others can be with you, if they want, but they'll share the risks."
-            in
-                playerTaskStructure ptOne ptTwo
+                
+                Just DelveAhead ->
+                    ( "...you are already INSIDE the new section!"
+                    , "Others can be with you, if they want, but they'll share the risks."
+                    )
 
-        Just GoWatchfully ->
-            let
-                ptOne = "...you are just OUTSIDE or already INSIDE the new section, your choice"
-                ptTwo = "Others can be with you, if they want, but they'll share the risks."
-            in
-                playerTaskStructure ptOne ptTwo
-        
-        Just Forage ->
-            let
-                ptOne = "...say WHY it makes sense that such a thing would be available here."
-                ptTwo = "If anyone objects, you can't make this Move."
-            in
-                playerTaskStructure ptOne ptTwo
-        
-        Just Prod ->
-            let
-                ptOne = "...say exactly HOW you do it."
-                ptTwo = "Say also what you are afraid could go wrong."
-            in
-                playerTaskStructure ptOne ptTwo
-           
-        Just Inspect ->
-            let
-                ptOne = "...say exactly HOW you do it"
-                ptTwo = "Say also what you are afraid could go wrong."
-            in
-                playerTaskStructure ptOne ptTwo
+                Just GoWatchfully ->
+                    ( "...you are just OUTSIDE or already INSIDE the new section, your choice"
+                    , "Others can be with you, if they want, but they'll share the risks."
+                    )
+                
+                Just Forage ->
+                    ( "...say WHY it makes sense that such a thing would be available here."
+                    , "If anyone objects, you can't make this Move."
+                    )
+                
+                Just Prod ->
+                    ( "...say exactly HOW you do it."
+                    , "Say also what you are afraid could go wrong."
+                    )
+                
+                Just Inspect ->
+                    ( "...say exactly HOW you do it"
+                    , "Say also what you are afraid could go wrong."
+                    )
 
-        Just TakeaRisk ->
-            let
-                ptOne = "...say exactly HOW you do it."
-                ptTwo = "Check if Traits or Help apply and spend them if you want."
-            in
-                playerTaskStructure ptOne ptTwo
-        
-        Just UseIngenuity ->
-            let
-                ptOne = "...the Enemy will tell you which Materials, Tools and Knowledges are required and how much Time is needed."
-                ptTwo = "If you have everything ready at hand, say HOW you do it, then it is done."
-            in
-                playerTaskStructure ptOne ptTwo
-           
-        Just Fight ->
-            let
-                ptOne = "...you are already INSIDE the new section!"
-                ptTwo = "Others can be with you, if they want, but they'll share the risks."
-            in
-                playerTaskStructure ptOne ptTwo
+                Just TakeaRisk ->
+                    ( "...say exactly HOW you do it."
+                    , "Check if Traits or Help apply and spend them if you want."
+                    )
+                
+                Just UseIngenuity ->
+                    ( "...the Enemy will tell you which Materials, Tools and Knowledges are required and how much Time is needed."
+                    , "If you have everything ready at hand, say HOW you do it, then it is done."
+                    )
+                
+                Just Fight ->
+                    ( "...you are already INSIDE the new section!"
+                    , "Others can be with you, if they want, but they'll share the risks."
+                    )
+                
+                Just EnemyMove ->
+                    ( "Next, the Enemy will take their turn."
+                    , "Click the button when you are ready!"
+                    )
 
-        Nothing ->
-            [paragraph
-                []
-                [ text "" ]
-            ]
+                Nothing ->
+                    ("","")
+    in
+        playerTaskStructure model (Tuple.first switch) (Tuple.second switch)
+
+
+
 
 bearingsText : Model -> List (Element msg)
 bearingsText model = 
@@ -854,15 +866,7 @@ moveButtonsMouseover model =
             Background.color (rgb255 0 255 0)
 
 
-buttonSwitch : Model -> Element Msg
-buttonSwitch model =
-    if
-        Dict.values model.adventurers
-        |> List.all (\adv -> adv.canMove == False)
-    then
-        otherButtons EnemyTurn "Enemy Turn"
-    else
-        otherButtons Confirm "Confirm?"
+
 
 otherButtons : Msg -> String -> Element Msg
 otherButtons msg name =
