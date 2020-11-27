@@ -18,6 +18,7 @@ import Maybe exposing (andThen)
 import Html.Attributes exposing (kind)
 import Dict
 import Tuple3 exposing (third)
+import Element.Region exposing (description)
 
 
 
@@ -107,7 +108,7 @@ initialModel =
         , description = 0
         , openings = 0
         }
-    , pastLocations = [0]
+    , pastLocations = []
     }
 
 
@@ -257,7 +258,18 @@ doDelveAhead model nuSegment =
     | segment = Just nuSegment
     , discoveryPoints = discoveryUpdate model
     , previousMove = (Just DelveAhead, "DelveAhead")
+    , pastLocations = pastLocationsUpdate model nuSegment
     } |> routineUpdates
+
+
+--pastLocationsUpdate: Model -> Segment -> Model
+pastLocationsUpdate : Model -> Segment -> List Int
+pastLocationsUpdate model nuSegment =
+    if nuSegment.kind == Location then
+        nuSegment.description :: model.pastLocations
+    else
+        model.pastLocations
+
 
 
 
@@ -273,9 +285,6 @@ discoveryUpdate model =
 
 
 
-dieRoll : Random.Generator Int
-dieRoll = Random.int 1 6
-
 
 
 rollDelveAhead : Model -> Cmd Msg
@@ -283,58 +292,64 @@ rollDelveAhead model =
     Random.map3
             Segment
             (kindRoll model)
-            dieRoll
-            dieRoll
+            descriptionRoll
+            openingsRoll
     |>
     Random.generate SegmentRolls
 
 
 
 kindRoll : Model -> Random.Generator SomePlace
-kindRoll model = 
+kindRoll model =
+    let
+        locationChance =
+            if (model.pastLocations |> List.length) < 6 then
+                (0 + model.discoveryPoints |> toFloat)
+            else
+                0
+    in 
     Random.weighted
         (3, Passage )
         [ (2, Area )
-        , ( (0+model.discoveryPoints |> toFloat) , Location )
+        , (locationChance , Location )
         ]
+    {- |> Random.andThen
+    (\kind ->
+        descriptionRoll kind model) -}
+    
 
 
+descriptionRoll : Random.Generator Int
+descriptionRoll =
+ {-    if kind == Location then
+        Random.int 1 6
+        |> Random.andThen
+        (\n ->
+            if List.member n model.pastLocations == True
+            then descriptionRoll Location
+            else n
+        )
+    else -}
+        Random.int 1 6
+   -- |> Random.andThen (\n -> )
 
-segmentText : Model -> String
-segmentText model =
+    {- if (kindRoll model) == (Tuple.second (kindRoll model) ) then
+        Random.int 1 6
+    else
+        Random.int 1 6
     let
-        mySegment : Segment
-        mySegment = segmentAccess model
+        roll = Random.int 1 6
     in
-    case mySegment.kind of
-        Passage ->
-            case mySegment.description of
-               1 -> "an ascending passage"
-               2 -> "a descending passage"
-               3 -> "a twisting passage"
-               4 -> "a forking passage"
-               5 -> "an unstable passage"
-               6 -> "an obstructed passage"
-               _ -> "Passage Error"
-        Area ->
-            case mySegment.description of
-               0 -> "a small space, mostly empty, currently safe"
-               1 -> "a small area"
-               2 -> "a big area"
-               3 -> "a vast area"
-               4 -> "a luxurious area"
-               5 -> "a ruined area"
-               6 -> "an eerie area"
-               _ -> "Area Error"
-        Location ->
-            case mySegment.description of
-               1 -> "a chance to get out"
-               2 -> "a shot at the quest"
-               3 -> "a great treasure"
-               4 -> "a brush with evil"
-               5 -> "?a"
-               6 -> "?b"
-               _ -> "Location Error"
+        if (List.member roll model.pastLocations) == True then
+            descriptionRoll model
+        else
+            roll -}
+
+
+
+
+openingsRoll : Random.Generator Int
+openingsRoll = Random.int 1 6
 
 
 
@@ -347,6 +362,69 @@ segmentAccess model =
             , openings = 0
             }
         Just segment -> segment
+
+
+
+segmentText : Model -> String
+segmentText model =
+    let
+        mySegment : Segment
+        mySegment = segmentAccess model
+        -- model.segment
+
+        description = mySegment.description
+        -- model.segment.description
+
+        nuSegment n =
+            { kind = mySegment.kind
+            , description = n
+            , openings = mySegment.openings
+            }
+        
+        --checkLocation : Int
+        checkLocation =
+            if (model.pastLocations |> List.length) == 6 then
+                model
+            else
+                if description > 6 then
+                    {model | segment = Just (nuSegment (description - 6)) }
+                else
+                    if (List.member description model.pastLocations) == False then
+                        model
+                    else
+                        {model | segment = Just (nuSegment (description + 1)) }
+    in
+    case mySegment.kind of
+        Passage ->
+            case description of
+               1 -> "an ascending passage"
+               2 -> "a descending passage"
+               3 -> "a twisting passage"
+               4 -> "a forking passage"
+               5 -> "an unstable passage"
+               6 -> "an obstructed passage"
+               _ -> "Passage Error"
+        Area ->
+            case description of
+               0 -> "a small space, mostly empty, currently safe"
+               1 -> "a small area"
+               2 -> "a big area"
+               3 -> "a vast area"
+               4 -> "a luxurious area"
+               5 -> "a ruined area"
+               6 -> "an eerie area"
+               _ -> "Area Error"
+        Location ->
+            case description of
+               1 -> "a chance to get out"
+               2 -> "a shot at the quest"
+               3 -> "a great treasure"
+               4 -> "a brush with evil"
+               5 -> "?a"
+               6 -> "?b"
+               _ -> "Location Error"
+
+
 
 
 
