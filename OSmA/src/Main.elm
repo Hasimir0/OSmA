@@ -210,7 +210,7 @@ update msg model =
 
 initSessionLocations : Model -> (List Int) -> Model
 initSessionLocations model list =
-    {model | sessionLocations = list}
+    {model | sessionLocations = 0 :: list}
 
 
 
@@ -318,6 +318,7 @@ rollSessionLocations =
     |> Random.generate InitLocations
 
 
+
 rollDelveAhead : Model -> Cmd Msg
 rollDelveAhead model =
     Random.map3
@@ -334,7 +335,7 @@ kindRoll : Model -> Random.Generator SomePlace
 kindRoll model =
     let
         locationChance =
-            if (model.sessionLocations |> List.length) > 0 then
+            if (model.sessionLocations |> List.length) > 1 then
                 (0 + model.discoveryPoints |> toFloat)
             else
                 0

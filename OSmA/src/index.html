@@ -10919,10 +10919,7 @@ var $author$project$Main$rollSessionLocations = A2(
 	$elm$random$Random$generate,
 	$author$project$Main$InitLocations,
 	$elm_community$random_extra$Random$List$shuffle(
-		A2(
-			$elm$core$List$cons,
-			0,
-			A2($elm$core$List$range, 1, 6))));
+		A2($elm$core$List$range, 1, 6)));
 var $author$project$Main$init = function (_v0) {
 	return _Utils_Tuple2($author$project$Main$initialModel, $author$project$Main$rollSessionLocations);
 };
@@ -11096,7 +11093,9 @@ var $author$project$Main$initSessionLocations = F2(
 	function (model, list) {
 		return _Utils_update(
 			model,
-			{sessionLocations: list});
+			{
+				sessionLocations: A2($elm$core$List$cons, 0, list)
+			});
 	});
 var $author$project$Main$Segment = F3(
 	function (kind, description, openings) {
@@ -11171,13 +11170,13 @@ var $elm$random$Random$weighted = F2(
 			A2($elm$random$Random$float, 0, total));
 	});
 var $author$project$Main$kindRoll = function (model) {
-	var locationChance = ($elm$core$List$length(model.sessionLocations) > 0) ? (0 + model.discoveryPoints) : 0;
+	var locationChance = ($elm$core$List$length(model.sessionLocations) > 1) ? 1 : 0;
 	return A2(
 		$elm$random$Random$weighted,
-		_Utils_Tuple2(3, $author$project$Main$Passage),
+		_Utils_Tuple2(0, $author$project$Main$Passage),
 		_List_fromArray(
 			[
-				_Utils_Tuple2(2, $author$project$Main$Area),
+				_Utils_Tuple2(0, $author$project$Main$Area),
 				_Utils_Tuple2(locationChance, $author$project$Main$Location)
 			]));
 };
