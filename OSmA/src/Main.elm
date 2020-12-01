@@ -13,12 +13,14 @@ import Maybe exposing (Maybe)
 import Dict exposing (Dict)
 import Html.Attributes exposing (name)
 import Random exposing (generate)
+import Random.List exposing (shuffle)
 import Task
 import Maybe exposing (andThen)
 import Html.Attributes exposing (kind)
 import Dict
 import Tuple3 exposing (third)
 import Element.Region exposing (description)
+import Maybe exposing (withDefault)
 
 
 
@@ -51,7 +53,8 @@ type alias Model =
     , activeMove : (Maybe Move, String)
     , previousMove : (Maybe Move, String)
     , segment : Maybe Segment
-    , pastLocations : List Int
+    , sessionLocations : List Int
+    , testLocation : Int
     }
 
 type alias Adventurer =
@@ -84,10 +87,11 @@ type SomePlace
 
 
 
-
 init : () -> (Model, Cmd Msg)
 init _ =
-    (initialModel, Cmd.none)
+    (initialModel, rollSessionLocations)
+
+
 
 initialModel : Model
 initialModel =
@@ -108,13 +112,16 @@ initialModel =
         , description = 0
         , openings = 0
         }
-    , pastLocations = []
+    , sessionLocations = []
+    , testLocation = 0
     }
 
 
 
+
 type Msg =
-    SetAction String
+    InitLocations (List Int)
+    | SetAction String
     | ActivateAdv Adventurer
     | MenuAction
     | Confirm
@@ -131,6 +138,9 @@ type Msg =
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model = 
     case msg of
+        InitLocations list ->
+            (initSessionLocations model list, Cmd.none)
+
         SetAction "Navigate" ->
             (model, Cmd.none)
         SetAction "Search" ->
@@ -198,6 +208,12 @@ update msg model =
 
 
 
+initSessionLocations : Model -> (List Int) -> Model
+initSessionLocations model list =
+    {model | sessionLocations = list}
+
+
+
 routineUpdates : Model -> Model
 routineUpdates model =
     let
@@ -256,35 +272,50 @@ doDelveAhead : Model -> Segment-> Model
 doDelveAhead model nuSegment =
     { model 
     | segment = Just nuSegment
-    , discoveryPoints = discoveryUpdate model
+    , discoveryPoints = discoveryUpdate model nuSegment
     , previousMove = (Just DelveAhead, "DelveAhead")
-    , pastLocations = pastLocationsUpdate model nuSegment
+    , sessionLocations = sessionLocationsUpdate model nuSegment
+    , testLocation = justAtest model
     } |> routineUpdates
 
 
---pastLocationsUpdate: Model -> Segment -> Model
-pastLocationsUpdate : Model -> Segment -> List Int
-pastLocationsUpdate model nuSegment =
+justAtest : Model -> Int
+justAtest model = 
+    let
+        head = model.sessionLocations |> List.head
+    in
+        case head of
+            Nothing -> 0
+            Just n -> n
+
+sessionLocationsUpdate : Model -> Segment -> List Int
+sessionLocationsUpdate model nuSegment =
     if nuSegment.kind == Location then
-        nuSegment.description :: model.pastLocations
+        model.sessionLocations |> List.drop 1
     else
-        model.pastLocations
+        model.sessionLocations
 
 
 
-
-discoveryUpdate : Model -> Int
-discoveryUpdate model =
-    case model.segment of
-        Nothing -> model.discoveryPoints
+discoveryUpdate : Model -> Segment -> Int
+discoveryUpdate model nuSegment =
+    case Just nuSegment of
+        Nothing -> 0
         Just segment ->
             case segment.kind of
-               Location -> 0
+               Location -> model.discoveryPoints - model.discoveryPoints
                Passage -> model.discoveryPoints + 1
                Area -> model.discoveryPoints + 1
 
 
 
+
+
+rollSessionLocations : Cmd Msg
+rollSessionLocations =
+    List.range 1 6
+    |> Random.List.shuffle
+    |> Random.generate InitLocations
 
 
 rollDelveAhead : Model -> Cmd Msg
@@ -303,7 +334,7 @@ kindRoll : Model -> Random.Generator SomePlace
 kindRoll model =
     let
         locationChance =
-            if (model.pastLocations |> List.length) < 6 then
+            if (model.sessionLocations |> List.length) > 0 then
                 (0 + model.discoveryPoints |> toFloat)
             else
                 0
@@ -313,38 +344,12 @@ kindRoll model =
         [ (2, Area )
         , (locationChance , Location )
         ]
-    {- |> Random.andThen
-    (\kind ->
-        descriptionRoll kind model) -}
-    
+
 
 
 descriptionRoll : Random.Generator Int
 descriptionRoll =
- {-    if kind == Location then
-        Random.int 1 6
-        |> Random.andThen
-        (\n ->
-            if List.member n model.pastLocations == True
-            then descriptionRoll Location
-            else n
-        )
-    else -}
-        Random.int 1 6
-   -- |> Random.andThen (\n -> )
-
-    {- if (kindRoll model) == (Tuple.second (kindRoll model) ) then
-        Random.int 1 6
-    else
-        Random.int 1 6
-    let
-        roll = Random.int 1 6
-    in
-        if (List.member roll model.pastLocations) == True then
-            descriptionRoll model
-        else
-            roll -}
-
+    Random.int 1 6
 
 
 
@@ -369,30 +374,18 @@ segmentText : Model -> String
 segmentText model =
     let
         mySegment : Segment
-        mySegment = segmentAccess model
-        -- model.segment
-
-        description = mySegment.description
-        -- model.segment.description
-
-        nuSegment n =
-            { kind = mySegment.kind
-            , description = n
-            , openings = mySegment.openings
-            }
+        mySegment = segmentAccess model  -- model.segment
         
-        --checkLocation : Int
-        checkLocation =
-            if (model.pastLocations |> List.length) == 6 then
-                model
-            else
-                if description > 6 then
-                    {model | segment = Just (nuSegment (description - 6)) }
-                else
-                    if (List.member description model.pastLocations) == False then
-                        model
-                    else
-                        {model | segment = Just (nuSegment (description + 1)) }
+
+        description = -- model.segment.description    
+            if mySegment.kind == Location
+            then
+                case (model.sessionLocations |> List.head) of
+                    Just n -> n
+                    Nothing -> 0
+            else mySegment.description
+        
+
     in
     case mySegment.kind of
         Passage ->
