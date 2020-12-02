@@ -58,16 +58,24 @@ type alias Model =
     , testLocation : Int
     }
 
+
+
 type alias Adventurer =
     { name : String
     , canMove : Bool
     }
 
+
+
 type alias Segment =
-    { kind : SomePlace
-    , description : Int
-    , openings : Int
+    { placeKind : SomePlace
+    , placeText : Int
+    , placeOpenings : Int
+    , thingKind : SomeThing
+    , thingText : Int
     }
+
+
 
 type Move
     = Orientate
@@ -81,11 +89,19 @@ type Move
     | Fight
     | EnemyMove
 
+
+
 type SomePlace
     = Passage
     | Area
     | Location
 
+
+
+type SomeThing
+    = Oddity
+    | Obstacle
+    | Threat
 
 
 init : () -> (Model, Cmd Msg)
@@ -110,9 +126,11 @@ initialModel =
     , activeMove = (Nothing, "do something")
     , previousMove = (Nothing, "do something")
     , segment = Just 
-        { kind = Area
-        , description = 0
-        , openings = 0
+        { placeKind = Area
+        , placeText = 0
+        , placeOpenings = 0
+        , thingKind = Oddity
+        , thingText = 0
         }
     , sessionLocationList = []
     , testLocation = 0
@@ -275,6 +293,7 @@ doDelveAhead model nuSegment =
     { model 
     | segment = Just nuSegment
     , discoveryPts = discoveryUpdate model nuSegment
+    , perilPts = perilUpdate model nuSegment
     , previousMove = (Just DelveAhead, "DelveAhead")
     , sessionLocationList = sessionLocationsUpdate model nuSegment
     , testLocation = justAtest model
@@ -292,7 +311,7 @@ justAtest model =
 
 sessionLocationsUpdate : Model -> Segment -> List Int
 sessionLocationsUpdate model nuSegment =
-    if nuSegment.kind == Location then
+    if nuSegment.placeKind == Location then
         model.sessionLocationList |> List.drop 1
     else
         model.sessionLocationList
@@ -304,12 +323,22 @@ discoveryUpdate model nuSegment =
     case Just nuSegment of
         Nothing -> 0
         Just segment ->
-            case segment.kind of
+            case segment.placeKind of
                Location -> model.discoveryPts - model.discoveryPts
                Passage -> model.discoveryPts + 1
                Area -> model.discoveryPts + 1
 
 
+
+perilUpdate : Model -> Segment -> Int
+perilUpdate model nuSegment =
+    case Just nuSegment of
+        Nothing -> 0
+        Just segment ->
+            case segment.thingKind of
+               Threat -> model.perilPts - model.perilPts
+               Obstacle -> model.perilPts + 1
+               Oddity -> model.perilPts + 1
 
 
 
@@ -323,18 +352,20 @@ rollSessionLocations =
 
 rollDelveAhead : Model -> Cmd Msg
 rollDelveAhead model =
-    Random.map3
+    Random.map5
             Segment
-            (kindRoll model)
-            descriptionRoll
-            openingsRoll
+            (placeKindRoll model)
+            basicRoll
+            placeOpeningsRoll
+            (thingKindRoll model)
+            basicRoll
     |>
     Random.generate SegmentRolls
 
 
 
-kindRoll : Model -> Random.Generator SomePlace
-kindRoll model =
+placeKindRoll : Model -> Random.Generator SomePlace
+placeKindRoll model =
     let
         locationChance =
             if (model.sessionLocationList |> List.length) > 1 then
@@ -350,14 +381,28 @@ kindRoll model =
 
 
 
-descriptionRoll : Random.Generator Int
-descriptionRoll =
+basicRoll : Random.Generator Int
+basicRoll =
     Random.int 1 6
 
 
 
-openingsRoll : Random.Generator Int
-openingsRoll = Random.int 1 6
+placeOpeningsRoll : Random.Generator Int
+placeOpeningsRoll = Random.int 1 6
+
+
+
+thingKindRoll : Model -> Random.Generator SomeThing
+thingKindRoll model =
+    let
+        threatChance =
+            1 + model.perilPts |> toFloat
+    in 
+    Random.weighted
+        (3, Oddity )
+        [ (2, Obstacle )
+        , (threatChance , Threat )
+        ]
 
 
 
@@ -365,34 +410,36 @@ segmentAccess : Model ->  Segment
 segmentAccess model =
     case model.segment of
         Nothing ->
-            { kind = Area
-            , description = 0
-            , openings = 0
+            { placeKind = Area
+            , placeText = 0
+            , placeOpenings = 0
+            , thingKind = Oddity
+            , thingText = 0
             }
         Just segment -> segment
 
 
 
-segmentText : Model -> String
-segmentText model =
+somePlaceText : Model -> String
+somePlaceText model =
     let
         mySegment : Segment
         mySegment = segmentAccess model  -- model.segment
         
 
-        description = -- model.segment.description    
-            if mySegment.kind == Location
+        somePlace = -- model.segment.description    
+            if mySegment.placeKind == Location
             then
                 case (model.sessionLocationList |> List.head) of
                     Just n -> n
                     Nothing -> 0
-            else mySegment.description
-        
+            else mySegment.placeText
 
     in
-    case mySegment.kind of
+    case mySegment.placeKind of
+
         Passage ->
-            case description of
+            case somePlace of
                1 -> "an ascending passage"
                2 -> "a descending passage"
                3 -> "a twisting passage"
@@ -400,8 +447,9 @@ segmentText model =
                5 -> "an unstable passage"
                6 -> "an obstructed passage"
                _ -> "Passage Error"
+
         Area ->
-            case description of
+            case somePlace of
                0 -> "a small space, mostly empty, currently safe"
                1 -> "a small area"
                2 -> "a big area"
@@ -410,8 +458,9 @@ segmentText model =
                5 -> "a ruined area"
                6 -> "an eerie area"
                _ -> "Area Error"
+
         Location ->
-            case description of
+            case somePlace of
                1 -> "a chance to get out"
                2 -> "a shot at the quest"
                3 -> "a great treasure"
@@ -422,15 +471,13 @@ segmentText model =
 
 
 
-
-
-openingsText1 : Model -> String
-openingsText1 model =
+placeOpeningsText1 : Model -> String
+placeOpeningsText1 model =
     let
         mySegment : Segment
         mySegment = segmentAccess model
     in
-    case mySegment.openings of
+    case mySegment.placeOpenings of
         0 -> "NO other"
         1 -> "NO other"
         2 -> "ONE other"
@@ -442,17 +489,62 @@ openingsText1 model =
 
 
 
-openingsText2 : Model -> String
-openingsText2 model =
+placeOpeningsText2 : Model -> String
+placeOpeningsText2 model =
     let
         plural : Segment
         plural = segmentAccess model
     in
     "there seems to be "
-    ++ openingsText1 model ++
+    ++ placeOpeningsText1 model ++
     " obvious opening"
-    ++ (if plural.openings > 3 then "s" else "") ++
+    ++ (if plural.placeOpenings > 3 then "s" else "") ++
     " in addition to the one from whence you came in"
+
+
+
+someThingText : Model -> String
+someThingText model =
+    let
+        mySegment : Segment
+        mySegment = segmentAccess model  -- model.segment
+        
+
+        someThing = mySegment.thingText
+
+    in
+    case mySegment.thingKind of
+    
+        Oddity ->
+            case someThing of
+               0 -> "nothing much is going on here. For now."
+               1 -> "alluring"
+               2 -> "alarming"
+               3 -> "out of place"
+               4 -> "old"
+               5 -> "new"
+               6 -> "alive"
+               _ -> "Oddity Error"
+
+        Obstacle ->
+            case someThing of
+               1 -> "natural"
+               2 -> "complex"
+               3 -> "manufactured"
+               4 -> "unnatural"
+               5 -> "architectural"
+               6 -> "alive"
+               _ -> "Obstacle Error"
+
+        Threat ->
+            case someThing of
+               1 -> "a trap"
+               2 -> "a trap"
+               3 -> "a dweller"
+               4 -> "a dweller"
+               5 -> "that is part of the environment itself"
+               6 -> "that is part of the environment itself"
+               _ -> "Threat Error"
 
 
 
@@ -705,6 +797,8 @@ statsRow model =
             [ text ("This is Round " ++ (String.fromInt model.roundCounter) )
             , el [] (text "")
             , text ("Discovery rating : " ++ (String.fromInt model.discoveryPts) )
+            , el [] (text "")
+            , text ("Peril rating : " ++ (String.fromInt model.perilPts) )
             ]
         ]
 
@@ -719,8 +813,9 @@ sitchRow model =
             Tuple.second model.activeMove
         previousMove =
             Tuple.first model.previousMove
-        mySegment = segmentText model
-        myOpenings = openingsText2 model
+        myPlaceText = somePlaceText model
+        myOpenings = placeOpeningsText2 model
+        myThingText = someThingText model
     in
     row
         [ centerX
@@ -733,25 +828,30 @@ sitchRow model =
                 [ Background.color (rgb255 211 211 211)
                 , padding 5
                 ]
-                [text (
-                    if previousMove == Just DelveAhead then "You find yourself in..."
-                    else "Current section elements:"
-                ) ]
+                [text ("You find yourself in...") ]
 
             , column
                 []
-                [ bulletListBuilder mySegment
+                [ bulletListBuilder myPlaceText
                 , bulletListBuilder myOpenings
                 ]
             , el [] (text "")
             , paragraph
                 [ Background.color (rgb255 211 211 211)
                 , padding 5]
-                [text "You face"]
+                [text (
+                    if previousMove == Just DelveAhead
+                    then "Here you face something clearly " ++
+                        case (segmentAccess model).thingKind of
+                            Oddity -> "NOTICEABE because of how it is..."
+                            Obstacle -> "PROBLEMATIC that lays in your way. It is something..."
+                            Threat -> "DANGEROUS..."
+                    else "From what you can tell..."
+                ) ]
 
             , column
                 []
-                [bulletListBuilder mySegment]
+                [bulletListBuilder myThingText]
             ]
 
         , column (stdColumn ++ [width (fillPortion 1) ] )
