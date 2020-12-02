@@ -851,7 +851,26 @@ sitchRow model =
 
             , column
                 []
-                [bulletListBuilder myThingText]
+                [ bulletListBuilder myThingText
+                , if
+                        (segmentAccess model).thingKind == Threat
+                    then if
+                        (Tuple.first model.previousMove == Just DelveAhead)
+                        then
+                            bulletListBuilder ("the threat is ALREADY aware of your presence!")
+                        else
+                            bulletListBuilder ("the threat is NOT aware of your presence, for now.")
+                    else text ""
+                , if
+                        (segmentAccess model).thingKind == Threat
+                    then if
+                        (Tuple.first model.previousMove == Just DelveAhead)
+                        then 
+                            bulletListBuilder ("it takes action before you can react: how?")
+                        else 
+                            bulletListBuilder ("what is it doing?")
+                    else text ""
+                ]
             ]
 
         , column (stdColumn ++ [width (fillPortion 1) ] )
