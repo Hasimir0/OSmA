@@ -46,14 +46,15 @@ subscriptions model =
 -- MODEL
 type alias Model =
     { roundCounter : Int
-    , navPoints : Int
-    , discoveryPoints : Int
+    , navigationPts : Int
+    , discoveryPts : Int
+    , perilPts : Int
     , adventurers : Dict String Adventurer
     , activeAdvName : String
     , activeMove : (Maybe Move, String)
     , previousMove : (Maybe Move, String)
     , segment : Maybe Segment
-    , sessionLocations : List Int
+    , sessionLocationList : List Int
     , testLocation : Int
     }
 
@@ -96,8 +97,9 @@ init _ =
 initialModel : Model
 initialModel =
     { roundCounter = 0
-    , navPoints = 0
-    , discoveryPoints = 0
+    , navigationPts = 0
+    , discoveryPts = 0
+    , perilPts = 0
     , adventurers =
         Dict.fromList
             [ ("The Nameless One", Adventurer "The Nameless One" True)
@@ -112,7 +114,7 @@ initialModel =
         , description = 0
         , openings = 0
         }
-    , sessionLocations = []
+    , sessionLocationList = []
     , testLocation = 0
     }
 
@@ -169,7 +171,7 @@ update msg model =
             case Tuple.first model.activeMove of
 
                 Just Orientate -> -- Move type, not Msg type
-                    if model.navPoints < 3
+                    if model.navigationPts < 3
                     then (doOrientate model, Cmd.none)
                     else (model, Cmd.none)
 
@@ -210,7 +212,7 @@ update msg model =
 
 initSessionLocations : Model -> (List Int) -> Model
 initSessionLocations model list =
-    {model | sessionLocations = 0 :: list}
+    {model | sessionLocationList = 0 :: list}
 
 
 
@@ -262,7 +264,7 @@ updateAdvCanMove model =
 doOrientate : Model -> Model
 doOrientate model =
     { model 
-    | navPoints = model.navPoints +1
+    | navigationPts = model.navigationPts +1
     , previousMove = (Just Orientate, "Orientate")
     } |> routineUpdates
 
@@ -272,9 +274,9 @@ doDelveAhead : Model -> Segment-> Model
 doDelveAhead model nuSegment =
     { model 
     | segment = Just nuSegment
-    , discoveryPoints = discoveryUpdate model nuSegment
+    , discoveryPts = discoveryUpdate model nuSegment
     , previousMove = (Just DelveAhead, "DelveAhead")
-    , sessionLocations = sessionLocationsUpdate model nuSegment
+    , sessionLocationList = sessionLocationsUpdate model nuSegment
     , testLocation = justAtest model
     } |> routineUpdates
 
@@ -282,7 +284,7 @@ doDelveAhead model nuSegment =
 justAtest : Model -> Int
 justAtest model = 
     let
-        head = model.sessionLocations |> List.head
+        head = model.sessionLocationList |> List.head
     in
         case head of
             Nothing -> 0
@@ -291,9 +293,9 @@ justAtest model =
 sessionLocationsUpdate : Model -> Segment -> List Int
 sessionLocationsUpdate model nuSegment =
     if nuSegment.kind == Location then
-        model.sessionLocations |> List.drop 1
+        model.sessionLocationList |> List.drop 1
     else
-        model.sessionLocations
+        model.sessionLocationList
 
 
 
@@ -303,9 +305,9 @@ discoveryUpdate model nuSegment =
         Nothing -> 0
         Just segment ->
             case segment.kind of
-               Location -> model.discoveryPoints - model.discoveryPoints
-               Passage -> model.discoveryPoints + 1
-               Area -> model.discoveryPoints + 1
+               Location -> model.discoveryPts - model.discoveryPts
+               Passage -> model.discoveryPts + 1
+               Area -> model.discoveryPts + 1
 
 
 
@@ -335,8 +337,8 @@ kindRoll : Model -> Random.Generator SomePlace
 kindRoll model =
     let
         locationChance =
-            if (model.sessionLocations |> List.length) > 1 then
-                (0 + model.discoveryPoints |> toFloat)
+            if (model.sessionLocationList |> List.length) > 1 then
+                (0 + model.discoveryPts |> toFloat)
             else
                 0
     in 
@@ -381,7 +383,7 @@ segmentText model =
         description = -- model.segment.description    
             if mySegment.kind == Location
             then
-                case (model.sessionLocations |> List.head) of
+                case (model.sessionLocationList |> List.head) of
                     Just n -> n
                     Nothing -> 0
             else mySegment.description
@@ -702,7 +704,7 @@ statsRow model =
             ]
             [ text ("This is Round " ++ (String.fromInt model.roundCounter) )
             , el [] (text "")
-            , text ("Discovery rating : " ++ (String.fromInt model.discoveryPoints) )
+            , text ("Discovery rating : " ++ (String.fromInt model.discoveryPts) )
             ]
         ]
 
@@ -804,19 +806,19 @@ playerTasks model =
                     ( "...say where you think you should go next, and explain why you think so."
                     , ( "You get your bearings. (max. "
                         ++
-                        ( 3 - model.navPoints |> String.fromInt )
+                        ( 3 - model.navigationPts |> String.fromInt )
                         ++
                         " times)"
                         )
                     )
                 
                 Just DelveAhead ->
-                    ( "...you are already INSIDE the new section!"
+                    ( "...you will be already INSIDE the new section!"
                     , "Others can be with you, if they want, but they'll share the risks."
                     )
 
                 Just GoWatchfully ->
-                    ( "...you are just OUTSIDE or already INSIDE the new section, your choice"
+                    ( "...you will be just OUTSIDE or already INSIDE the new section, your choice"
                     , "Others can be with you, if they want, but they'll share the risks."
                     )
                 
@@ -900,15 +902,15 @@ bearingsText : Model -> List (Element msg)
 bearingsText model = 
     let
         navStatus =
-            if model.navPoints == 0
+            if model.navigationPts == 0
             then "You are kinda lost."
             else "You've got your bearings!"
         navQuality =
-            if model.navPoints == 0
+            if model.navigationPts == 0
             then "not"
-            else if model.navPoints == 1
+            else if model.navigationPts == 1
             then "slightly"
-            else if model.navPoints == 2
+            else if model.navigationPts == 2
             then "moderately"
             else "greatly"
     in
