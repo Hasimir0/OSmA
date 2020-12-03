@@ -194,10 +194,11 @@ update msg model =
                     else (model, Cmd.none)
 
                 Just DelveAhead ->
-                    (model, rollDelveAhead model)
+                    (doDelveAhead model, explorationRoll model)
             
                 Just GoWatchfully ->
-                    (model, Cmd.none)
+                    (doGoWatchfully model, explorationRoll model)
+                
                 Just Forage ->
                     (model, Cmd.none)
                 Just Prod ->
@@ -218,7 +219,7 @@ update msg model =
                     (model, Cmd.none)
 
         SegmentRolls nuSegment ->
-            (doDelveAhead model nuSegment, Cmd.none)
+            (doExploration model nuSegment, Cmd.none)
             
         MenuAction ->
             (model, Cmd.none)
@@ -288,17 +289,29 @@ doOrientate model =
 
 
 
-doDelveAhead : Model -> Segment-> Model
-doDelveAhead model nuSegment =
+doExploration : Model -> Segment-> Model
+doExploration model nuSegment =
     { model 
     | segment = Just nuSegment
     , discoveryPts = discoveryUpdate model nuSegment
     , perilPts = perilUpdate model nuSegment
-    , previousMove = (Just DelveAhead, "DelveAhead")
     , sessionLocationList = sessionLocationsUpdate model nuSegment
     , testLocation = justAtest model
     } |> routineUpdates
 
+
+
+doDelveAhead : Model -> Model
+doDelveAhead model =
+    { model
+    | previousMove = (Just DelveAhead, "DelveAhead")
+    }
+
+doGoWatchfully : Model -> Model
+doGoWatchfully model =
+    { model
+    | previousMove = (Just GoWatchfully, "Go Watchfully")
+    }
 
 justAtest : Model -> Int
 justAtest model = 
@@ -308,6 +321,8 @@ justAtest model =
         case head of
             Nothing -> 0
             Just n -> n
+
+
 
 sessionLocationsUpdate : Model -> Segment -> List Int
 sessionLocationsUpdate model nuSegment =
@@ -350,8 +365,8 @@ rollSessionLocations =
 
 
 
-rollDelveAhead : Model -> Cmd Msg
-rollDelveAhead model =
+explorationRoll : Model -> Cmd Msg
+explorationRoll model =
     Random.map5
             Segment
             (placeKindRoll model)
@@ -905,87 +920,112 @@ playerPrompt model =
     else if model.activeAdvName == "Someone"
     then
         if Tuple.first model.activeMove == Just EnemyMove
-        then playerTasks model
+        then playerTaskText model
         else [paragraph [][text "Select an Adventurer."]]
     
     else if model.activeMove == (Nothing,"do something")
     then [paragraph [][text "Select a Move."]]
 
-    else playerTasks model
+    else playerTaskText model
+        
+        
 
 
 
-playerTasks : Model -> List (Element Msg)
-playerTasks model =
+playerTaskText : Model -> List (Element Msg)
+playerTaskText model =
     let
-        switch =
+        content =
             case Tuple.first model.activeMove of
 
                 Just Orientate ->
-                    ( "...say where you think you should go next, and explain why you think so."
+                    [ "...say where you think you should go next, and explain why you think so."
                     , ( "You get your bearings. (max. "
                         ++
                         ( 3 - model.navigationPts |> String.fromInt )
                         ++
                         " times)"
                         )
-                    )
+                    ]
                 
                 Just DelveAhead ->
-                    ( "...you will be already INSIDE the new section!"
+                    [ "...you will be already INSIDE the new section!"
                     , "Others can be with you, if they want, but they'll share the risks."
-                    )
+                    {- , "Delving Ahead is riskier than Going Watchfully!"
+                    , "a" -}
+                    ]
 
                 Just GoWatchfully ->
-                    ( "...you will be just OUTSIDE or already INSIDE the new section, your choice"
+                    [ "...you will be just OUTSIDE or already INSIDE the new section, your choice"
                     , "Others can be with you, if they want, but they'll share the risks."
-                    )
+                    ]
                 
                 Just Forage ->
-                    ( "...say WHY it makes sense that such a thing would be available here."
+                    [ "...say WHY it makes sense that such a thing would be available here."
                     , "If anyone objects, you can't make this Move."
-                    )
+                    ]
                 
                 Just Prod ->
-                    ( "...say exactly HOW you do it."
+                    [ "...say exactly HOW you do it."
                     , "Say also what you are afraid could go wrong."
-                    )
+                    ]
                 
                 Just Inspect ->
-                    ( "...say exactly HOW you do it"
+                    [ "...say exactly HOW you do it"
                     , "Say also what you are afraid could go wrong."
-                    )
+                    ]
 
                 Just TakeaRisk ->
-                    ( "...say exactly HOW you do it."
+                    [ "...say exactly HOW you do it."
                     , "Check if Traits or Help apply and spend them if you want."
-                    )
+                    ]
                 
                 Just UseIngenuity ->
-                    ( "...the Enemy will tell you which Materials, Tools and Knowledges are required and how much Time is needed."
+                    [ "...the Enemy will tell you which Materials, Tools and Knowledges are required and how much Time is needed."
                     , "If you have everything ready at hand, say HOW you do it, then it is done."
-                    )
+                    ]
                 
                 Just Fight ->
-                    ( "...you are already INSIDE the new section!"
+                    [ "...you are already INSIDE the new section!"
                     , "Others can be with you, if they want, but they'll share the risks."
-                    )
+                    ]
                 
                 Just EnemyMove ->
-                    ( "Next, the Enemy will take their turn."
+                    [ "Next, the Enemy will take their turn."
                     , "Click the button when you are ready!"
-                    )
+                    ]
 
                 Nothing ->
-                    ("","")
+                    ["",""]
     in
-        playerTaskStructure model (Tuple.first switch) (Tuple.second switch)
+        playerTaskStructure model content {- (Tuple.first switch) (Tuple.second switch) -}
 
 
 
-playerTaskStructure : Model -> String -> String -> List (Element Msg)
-playerTaskStructure model playerTaskOne playerTaskTwo =
-    [el [] 
+playerTaskStructure : Model -> List String -> List (Element Msg)
+playerTaskStructure model taskList {- playerTaskOne playerTaskTwo -} =
+    let
+        content : List (Element Msg)
+        content = List.map text taskList
+
+        container : List (Element Msg)
+        container =
+            [ el
+                [] 
+                ( paragraph
+                    [ Background.color (rgb255 200 200 200)
+                    , padding 5]
+                    content
+                )
+            , el [] (text "")
+            , buttonSwitch model
+            ]
+            
+    in
+        List.map (column []) [container]
+        
+        
+    {- [el [] 
         ( paragraph
             [ Background.color (rgb255 200 200 200)
             , padding 5]
@@ -999,9 +1039,8 @@ playerTaskStructure model playerTaskOne playerTaskTwo =
             [ text playerTaskTwo ]
         )
     , el [] (text "")
-    , --otherButtons Confirm "Confirm?"
     buttonSwitch model
-    ]
+    ] -}
 
 
 
