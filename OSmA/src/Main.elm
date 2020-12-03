@@ -687,109 +687,130 @@ advSelectionRow model =
 moveSelectionRow : Model -> Element Msg
 moveSelectionRow model =
     column
-        []
+        [width fill]
         [ paragraph
                     []
                     [ el [Font.bold] (text "3. ")
-                    , text "Which Move is being made?"]
-    
+                    , text "Which Move is being made?"
+                    ]
+
         , row
             [ padding 10
             , spacing 30
             , width fill
+            --, Background.color (rgb255 0 255 0)
             ]
-            [ column [width (fillPortion 1)]
+            [ column -- Navigate
+                [ width (fillPortion 1)
+                , spacing 10
+                , height fill
+                --, Background.color (rgb255 255 0 0)
+                ]
                 [ el
                     [centerX
                     , Font.bold
-                    , padding 10] (text "NAVIGATE" )
+                    , padding 10]
+                    (text "NAVIGATE")
 
-                , paragraph ( stdColumn ++ 
-                    [ Font.bold
-                    , Font.italic ] )
-                    [ moveButtons model (Orientate, "Orientate")
+                , column []
+                    [ paragraph
+                        ( stdColumn ++ [ Font.bold, Font.italic] )
+                        [ moveButtons model (Orientate, "Orientate") ]
+                    , paragraph stdColumn
+                        [ text "When you spend time consulting your maps and making sense of the area’s layout..."]
                     ]
-                , paragraph stdColumn
-                    [ text "When you spend time consulting your maps and making sense of the area’s layout..."]
-                
-                , text "|"
-                
-
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [moveButtons model (DelveAhead, "Delve Ahead")]
-                , paragraph stdColumn
-                    [ text "When you step into a new section hastily, carelessly or blindly..." ]
-                
-                , text "|"
-
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [moveButtons model (GoWatchfully, "Go Watchfully")]
-                , paragraph stdColumn
-                    [ text "When you step into a new section slowly and carefully..." ]
-                
+                , column []
+                    [ paragraph
+                        ( stdColumn ++ [ Font.bold, Font.italic] )
+                        [ moveButtons model (DelveAhead, "Delve Ahead") ]
+                    , paragraph stdColumn
+                        [ text "When you step into a new section hastily, carelessly or blindly..." ]
+                    ]
+                , column []
+                    [ paragraph
+                        ( stdColumn ++ [ Font.bold, Font.italic] )
+                        [ moveButtons model (GoWatchfully, "Go Watchfully") ]
+                    , paragraph stdColumn
+                        [ text "When you step into a new section slowly and carefully..." ]
+                    ]
                 ]
-
-            , column [width (fillPortion 1)]
+            
+            , column -- Search
+                [ width (fillPortion 1)
+                , spacing 10
+                , height fill
+                --, Background.color (rgb255 255 0 0)
+                ]
                 [ el
                     [centerX
                     , Font.bold
                     , padding 10] (text "SEARCH" )
 
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [ moveButtons model (Forage, "Forage")
+                , column []
+                    [ paragraph (stdColumn ++ [Font.bold, Font.italic])
+                        [ moveButtons model (Forage, "Forage")
+                        ]
+                    , paragraph stdColumn
+                        [ text "When you spend time looking around to find something you need..."]
                     ]
-                , paragraph stdColumn
-                    [ text "When you spend time looking around to find something you need..."]
-                
-                , text "|"
 
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [ moveButtons model (Prod, "Prod")
+                , column []
+                    [ paragraph (stdColumn ++ [Font.bold, Font.italic])
+                        [ moveButtons model (Prod, "Prod")
+                        ]
+                    , paragraph stdColumn
+                        [ text "When you manipulate or get very close to something specific in the current segment..." ]
                     ]
-                , paragraph stdColumn
-                    [ text "When you manipulate or get very close to something specific in the current segment..." ]
-                
-                , text "|"
 
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
-                    [ moveButtons model (Inspect, "Inspect")
+                , column []
+                    [ paragraph (stdColumn ++ [Font.bold, Font.italic])
+                        [ moveButtons model (Inspect, "Inspect")
+                        ]
+                    , paragraph stdColumn
+                        [ text "When you investigate something specific within the current segment with great caution or from a moderate distance..." ]
                     ]
-                , paragraph stdColumn
-                    [ text "When you investigate something specific within the current segment with great caution or from a moderate distance..." ]
                 ]
 
-            , column [width (fillPortion 1)]
+            , column -- Overcome
+                [ width (fillPortion 1)
+                , spacing 10
+                , height fill
+                --, Background.color (rgb255 255 0 0)
+                ]
                 [ el
                     [centerX
                     , Font.bold
                     , padding 10] (text "OVEWRCOME" )
 
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                , column []
+                    [ paragraph (stdColumn ++ [Font.bold, Font.italic])
                     [ moveButtons model (TakeaRisk, "Take a Risk")
                     ]
                 , paragraph stdColumn
                     [ text "When you try to overcome an obstacle with your own direct actions..."]
                 
-                , text "|"
+                ]
 
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                , column []
+                    [ paragraph (stdColumn ++ [Font.bold, Font.italic])
                     [ moveButtons model (UseIngenuity, "Use Ingenuity")
                     ]
                 , paragraph stdColumn
                     [ text "When you try to build, repair, craft or produce a thing..." ]
                 
-                , text "|"
+                ]
 
-                , paragraph (stdColumn ++ [Font.bold, Font.italic])
+                , column []
+                    [ paragraph (stdColumn ++ [Font.bold, Font.italic])
                     [ moveButtons model (Fight, "Fight")
                     ]
                 , paragraph stdColumn
                     [ text "When you fight a dangerous opponent..." ]
+                    ]
                 ]
             ]
         ]
-
-
+    
 
 statsRow : Model -> Element Msg
 statsRow model = 
@@ -951,8 +972,8 @@ playerTaskText model =
                 Just DelveAhead ->
                     [ "...you will be already INSIDE the new section!"
                     , "Others can be with you, if they want, but they'll share the risks."
-                    {- , "Delving Ahead is riskier than Going Watchfully!"
-                    , "a" -}
+                    , "Delving Ahead is riskier than Going Watchfully!"
+                    , "But you can perform one extra Move."
                     ]
 
                 Just GoWatchfully ->
@@ -1005,24 +1026,37 @@ playerTaskText model =
 playerTaskStructure : Model -> List String -> List (Element Msg)
 playerTaskStructure model taskList {- playerTaskOne playerTaskTwo -} =
     let
-        content : List (Element Msg)
-        content = List.map text taskList
+        --contentToText : List (Element Msg)
+        contentToText = List.map text taskList
+        -- [text a, text b, text c]
 
-        container : List (Element Msg)
+        --contentToParagraph : List (Element Msg)
+        contentToParagraph =
+            List.map (paragraph []) [contentToText]
+            |> List.intersperse (el [] (text "|"))
+            |> (::) (buttonSwitch model)
+        {-  [ paragraph [] (text a)
+            , el [] (text |)
+            , paragraph [] (text b)
+            , el [] (text |)
+            , paragraph [] (text c)]
+        -}
+
+        {- container : List (Element Msg)
         container =
             [ el
                 [] 
                 ( paragraph
                     [ Background.color (rgb255 200 200 200)
                     , padding 5]
-                    content
+                    content2
                 )
-            , el [] (text "")
-            , buttonSwitch model
-            ]
+            , el [] (text "|")
+            ] -}
             
     in
-        List.map (column []) [container]
+        contentToParagraph
+        
         
         
     {- [el [] 
