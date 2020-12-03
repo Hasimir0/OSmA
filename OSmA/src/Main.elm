@@ -199,6 +199,7 @@ update msg model =
                 
                 Just Forage ->
                     (model, Cmd.none)
+                    
                 Just Prod ->
                     (model, Cmd.none)
                 Just Inspect ->
@@ -313,8 +314,6 @@ doDelveAhead : Model -> Model
 doDelveAhead model =
     { model
     | previousMove = (Just DelveAhead, "DelveAhead")
-    --, turnCounter = (model.turnCounter -1)
-    --, adventurers = updateAdvCanMove model
     }
 
 
@@ -327,6 +326,11 @@ doGoWatchfully model =
 
 
 
+doForage : Model -> Model
+doForage model = 
+    { model
+    | previousMove = (Just Forage, "Forage")
+    }
 
 
 sessionLocationsUpdate : Model -> Segment -> List Int
@@ -989,8 +993,10 @@ playerTaskText model =
                     ]
                 
                 Just Forage ->
-                    [ "...say WHY it makes sense that such a thing would be available here."
-                    , "If anyone objects, you can't make this Move."
+                    [ "Say WHY it makes sense that such a thing would be available here."
+                    , "If no one objects, you can Confirm this Move."
+                    , "more Discovery = more stuff to find"
+                    , "more Peril = more danger"
                     ]
                 
                 Just Prod ->
