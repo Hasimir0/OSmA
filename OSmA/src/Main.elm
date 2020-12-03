@@ -45,7 +45,7 @@ subscriptions model =
 
 -- MODEL
 type alias Model =
-    { roundCounter : Int
+    { turnCounter : Int
     , navigationPts : Int
     , discoveryPts : Int
     , perilPts : Int
@@ -55,7 +55,6 @@ type alias Model =
     , previousMove : (Maybe Move, String)
     , segment : Maybe Segment
     , sessionLocationList : List Int
-    , testLocation : Int
     }
 
 
@@ -112,7 +111,7 @@ init _ =
 
 initialModel : Model
 initialModel =
-    { roundCounter = 0
+    { turnCounter = 0
     , navigationPts = 0
     , discoveryPts = 0
     , perilPts = 0
@@ -133,7 +132,6 @@ initialModel =
         , thingText = 0
         }
     , sessionLocationList = []
-    , testLocation = 0
     }
 
 
@@ -235,14 +233,25 @@ initSessionLocations model list =
 
 
 
+
 routineUpdates : Model -> Model
-routineUpdates model =
+routineUpdates oldModel =
     let
+        {- ifDelveTurn =
+            if Tuple.first oldModel.previousMove == Just DelveAhead
+            then 0
+            else 1 -}
+        
+        ifDelveHasMoved =
+            if Tuple.first oldModel.previousMove == Just DelveAhead
+            then oldModel.adventurers
+            else updateAdvCanMove oldModel
+
         nuModel : Model
         nuModel =
-            {model
-            | roundCounter = model.roundCounter +1
-            , adventurers = updateAdvCanMove model
+            { oldModel
+            | turnCounter = oldModel.turnCounter + 1 --ifDelveTurn
+            , adventurers = ifDelveHasMoved
             , activeAdvName = initialModel.activeAdvName
             , activeMove = initialModel.activeMove
             }
@@ -284,7 +293,7 @@ doOrientate : Model -> Model
 doOrientate model =
     { model 
     | navigationPts = model.navigationPts +1
-    , previousMove = (Just Orientate, "Orientate")
+    --, previousMove = (Just Orientate, "Orientate")
     } |> routineUpdates
 
 
@@ -296,7 +305,6 @@ doExploration model nuSegment =
     , discoveryPts = discoveryUpdate model nuSegment
     , perilPts = perilUpdate model nuSegment
     , sessionLocationList = sessionLocationsUpdate model nuSegment
-    , testLocation = justAtest model
     } |> routineUpdates
 
 
@@ -305,7 +313,11 @@ doDelveAhead : Model -> Model
 doDelveAhead model =
     { model
     | previousMove = (Just DelveAhead, "DelveAhead")
+    --, turnCounter = (model.turnCounter -1)
+    --, adventurers = updateAdvCanMove model
     }
+
+
 
 doGoWatchfully : Model -> Model
 doGoWatchfully model =
@@ -313,14 +325,7 @@ doGoWatchfully model =
     | previousMove = (Just GoWatchfully, "Go Watchfully")
     }
 
-justAtest : Model -> Int
-justAtest model = 
-    let
-        head = model.sessionLocationList |> List.head
-    in
-        case head of
-            Nothing -> 0
-            Just n -> n
+
 
 
 
@@ -830,7 +835,7 @@ statsRow model =
             , padding 10
             , alignTop
             ]
-            [ text ("This is Round " ++ (String.fromInt model.roundCounter) )
+            [ text ("This is Turn " ++ (String.fromInt model.turnCounter) )
             , el [] (text "")
             , text ("Discovery rating : " ++ (String.fromInt model.discoveryPts) )
             , el [] (text "")
@@ -876,7 +881,8 @@ sitchRow model =
                 [ Background.color (rgb255 211 211 211)
                 , padding 5]
                 [text (
-                    if previousMove == Just DelveAhead
+                    if
+                        (previousMove == Just DelveAhead) || (previousMove == Just GoWatchfully)
                     then "Here you face something clearly " ++
                         case (segmentAccess model).thingKind of
                             Oddity -> "NOTICEABE because of how it is..."
@@ -919,7 +925,7 @@ sitchRow model =
                 ]
             , el [] (text "")
             , column
-                [spacing 10]
+                [spacing 30]
                 (playerPrompt model)
             ]
         ]
@@ -960,7 +966,7 @@ playerTaskText model =
             case Tuple.first model.activeMove of
 
                 Just Orientate ->
-                    [ "...say where you think you should go next, and explain why you think so."
+                    [ "Say where you think you should go next, and explain why you think so."
                     , ( "You get your bearings. (max. "
                         ++
                         ( 3 - model.navigationPts |> String.fromInt )
@@ -970,15 +976,16 @@ playerTaskText model =
                     ]
                 
                 Just DelveAhead ->
-                    [ "...you will be already INSIDE the new section!"
+                    [ "You will be already INSIDE the new section!"
                     , "Others can be with you, if they want, but they'll share the risks."
-                    , "Delving Ahead is riskier than Going Watchfully!"
-                    , "But you can perform one extra Move."
+                    , "Delving Ahead is riskier than Going Watchfully..."
+                    , "...but you can perform one extra Move."
                     ]
 
                 Just GoWatchfully ->
-                    [ "...you will be just OUTSIDE or already INSIDE the new section, your choice"
+                    [ "You will be just OUTSIDE or already INSIDE the new section, your choice"
                     , "Others can be with you, if they want, but they'll share the risks."
+                    , "Going Watchfully is safer than Delving Ahead."
                     ]
                 
                 Just Forage ->
@@ -1019,62 +1026,26 @@ playerTaskText model =
                 Nothing ->
                     ["",""]
     in
-        playerTaskStructure model content {- (Tuple.first switch) (Tuple.second switch) -}
+        playerTaskStructure model content
 
 
 
 playerTaskStructure : Model -> List String -> List (Element Msg)
-playerTaskStructure model taskList {- playerTaskOne playerTaskTwo -} =
+playerTaskStructure model taskList =
     let
-        --contentToText : List (Element Msg)
-        contentToText = List.map text taskList
-        -- [text a, text b, text c]
-
-        --contentToParagraph : List (Element Msg)
-        contentToParagraph =
-            List.map (paragraph []) [contentToText]
-            |> List.intersperse (el [] (text "|"))
-            |> (::) (buttonSwitch model)
-        {-  [ paragraph [] (text a)
-            , el [] (text |)
-            , paragraph [] (text b)
-            , el [] (text |)
-            , paragraph [] (text c)]
-        -}
-
-        {- container : List (Element Msg)
-        container =
-            [ el
-                [] 
-                ( paragraph
-                    [ Background.color (rgb255 200 200 200)
-                    , padding 5]
-                    content2
-                )
-            , el [] (text "|")
-            ] -}
-            
+        color =  Background.color (rgb255 211 211 211)
+        list =
+            List.map
+            (\string ->
+                paragraph
+                    [ color
+                    , padding 5
+                    ]
+                    [ text string ]
+            ) taskList
     in
-        contentToParagraph
-        
-        
-        
-    {- [el [] 
-        ( paragraph
-            [ Background.color (rgb255 200 200 200)
-            , padding 5]
-            [ text playerTaskOne ]
-        )
-    , el [] (text "")
-    , el [] 
-        (paragraph
-            [ Background.color (rgb255 200 200 200)
-            , padding 5]
-            [ text playerTaskTwo ]
-        )
-    , el [] (text "")
-    buttonSwitch model
-    ] -}
+        List.append list [buttonSwitch model]
+    
 
 
 
