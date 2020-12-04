@@ -485,12 +485,12 @@ somePlaceText model =
 
         Location ->
             case somePlace of
-               1 -> "a chance to get out"
-               2 -> "a shot at the quest"
-               3 -> "a great treasure"
-               4 -> "a brush with evil"
-               5 -> "?a"
-               6 -> "?b"
+               1 -> "a place that gives you a chance to get out"
+               2 -> "a place that gives you a shot at the quest"
+               3 -> "a place that holds a great treasure"
+               4 -> "a place that reveals a great evil"
+               5 -> "a place that presents beauty among ugliness"
+               6 -> "a place that represents your deepest fear"
                _ -> "Location Error"
 
 
