@@ -626,7 +626,7 @@ view model =
                 , width fill
                 , height fill
                 ]
-                [ statsRow model
+                [ scoresRow model
                 , sitchRow model
                 ]
             ]
@@ -707,13 +707,11 @@ moveSelectionRow model =
             [ padding 10
             , spacing 30
             , width fill
-            --, Background.color (rgb255 0 255 0)
             ]
             [ column -- Navigate
                 [ width (fillPortion 1)
                 , spacing 10
                 , height fill
-                --, Background.color (rgb255 255 0 0)
                 ]
                 [ el
                     [centerX
@@ -748,7 +746,6 @@ moveSelectionRow model =
                 [ width (fillPortion 1)
                 , spacing 10
                 , height fill
-                --, Background.color (rgb255 255 0 0)
                 ]
                 [ el
                     [centerX
@@ -821,16 +818,14 @@ moveSelectionRow model =
         ]
     
 
-statsRow : Model -> Element Msg
-statsRow model = 
+scoresRow : Model -> Element Msg
+scoresRow model = 
     row
         [ width fill
-        --, Background.color (rgb255 150 150 150)
         ]
         [ column
             [ width (fillPortion 2)
             , padding 10
-            --, Background.color (rgb255 100 100 100) 
             ]
             [ column [] (bearingsText model)
             ]
@@ -851,49 +846,82 @@ statsRow model =
 
 sitchRow : Model -> Element Msg
 sitchRow model =
-    let
-        advName =
-            model.activeAdvName
-        activeMove =
-            Tuple.second model.activeMove
-        previousMove =
-            Tuple.first model.previousMove
-        myPlaceText = somePlaceText model
-        myOpenings = placeOpeningsText2 model
-        myThingText = someThingText model
-    in
     row
         [ centerX
         , padding 10
-        , spacing 30
+        , spacing 10
         , Background.color (rgb255 211 211 211)
         ]
-        [ column (stdColumn ++ [width (fillPortion 2) ] )
+        [ column
+        -- left side container
+            (stdColumn ++ 
+            [ width (fillPortion 2)
+            , spacing 40
+            ]
+            )
+
+            [ somePlaceBox model
+            , someThingBox model 
+            , someMoveBox model
+            ]
+            
+        -- right side container
+        , column
+            (stdColumn ++
+            [ width (fillPortion 1)
+            ]
+            )
+            
+            (advPromptBox model)
+        ]
+
+
+
+
+somePlaceBox : Model -> Element msg
+somePlaceBox model =
+    column
+        [spacing 10]
+        [ paragraph
+            [ Background.color (rgb255 211 211 211)
+            , padding 5
+            ]
+            [text ("You find yourself in...") ]
+
+        , column
+            []
+            [ bulletListBuilder (somePlaceText model)
+            , bulletListBuilder (placeOpeningsText2 model)
+            ]
+        ]
+
+
+
+someThingBox : Model -> Element msg
+someThingBox model =
+    let
+        previousMove = Tuple.first model.previousMove
+        myThingText = someThingText model
+    in
+        column
+            [spacing 10]
             [ paragraph
                 [ Background.color (rgb255 211 211 211)
                 , padding 5
                 ]
-                [text ("You find yourself in...") ]
-
-            , column
-                []
-                [ bulletListBuilder myPlaceText
-                , bulletListBuilder myOpenings
-                ]
-            , el [] (text "")
-            , paragraph
-                [ Background.color (rgb255 211 211 211)
-                , padding 5]
                 [text (
                     if
                         (previousMove == Just DelveAhead) || (previousMove == Just GoWatchfully)
-                    then "Here you face something clearly " ++
-                        case (segmentAccess model).thingKind of
-                            Oddity -> "NOTICEABE because of how it is..."
-                            Obstacle -> "PROBLEMATIC that lays in your way. It is something..."
-                            Threat -> "DANGEROUS..."
-                    else "From what you can tell..."
-                ) ]
+                    then
+                        "Here you face something clearly " ++
+                            case (segmentAccess model).thingKind of
+                                Oddity -> "NOTICEABE because of how it is..."
+                                Obstacle -> "PROBLEMATIC that lays in your way. It is something..."
+                                Threat -> "DANGEROUS..."
+                    else
+                        "From what you can tell..."
+                    )
+                ]
 
             , column
                 []
@@ -919,20 +947,62 @@ sitchRow model =
                 ]
             ]
 
-        , column (stdColumn ++ [width (fillPortion 1) ] )
-            [ paragraph
-                []
-                [ el [Font.bold] (text advName)
-                , text ( " is about to ")
-                , el [Font.bold] (text activeMove)
-                , text ( "." )
+someMoveBox : Model-> Element msg
+someMoveBox model =
+    let
+        content =
+            case Tuple.first model.previousMove of
+                Just Orientate -> ""
+
+                Just DelveAhead -> ""
+            
+                Just GoWatchfully -> ""
+                
+                Just Forage -> "Your foraging reveals..."
+                    
+                Just Prod -> ""
+                Just Inspect -> ""
+                Just TakeaRisk -> ""
+                Just UseIngenuity -> ""
+                Just Fight -> ""
+                
+                Just EnemyMove -> ""
+
+                _-> "some move error"
+    in
+    column [spacing 10]
+                [ paragraph
+                    [ Background.color (rgb255 211 211 211)
+                    , padding 5
+                    ]
+                    [text ( content ) ]
+
+                , column
+                    []
+                    [ bulletListBuilder (somePlaceText model)
+                    , bulletListBuilder (placeOpeningsText2 model)
+                    ]
                 ]
-            , el [] (text "")
-            , column
-                [spacing 30]
-                (playerPrompt model)
+
+
+advPromptBox : Model -> List (Element Msg)
+advPromptBox model =
+    
+
+        [ paragraph
+            []
+            [ el [Font.bold] (text model.activeAdvName )
+            , text ( " is about to ")
+            , el [Font.bold] (text <| Tuple.second model.activeMove )
+            , text ( "." )
             ]
+        
+        , column
+            [spacing 30]
+            (playerPrompt model)
         ]
+    
+
 
 
 
