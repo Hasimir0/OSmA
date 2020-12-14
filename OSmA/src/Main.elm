@@ -21,6 +21,8 @@ import Dict
 import Tuple3 exposing (third)
 import Element.Region exposing (description)
 import Maybe exposing (withDefault)
+import Html exposing (a)
+
 
 
 
@@ -141,9 +143,13 @@ type Msg =
     InitLocations (List Int)
     | SetAction String
     | ActivateAdv Adventurer
-    | MenuAction
+    | Navigate
+    | Search
+    | Overcome
+    | Rest
+    | AskTheGM
+    | DummyMsg
     | Confirm
-    --| EnemyTurn
     | SetMove (Move, String)
     | SegmentRolls Segment
 
@@ -219,8 +225,23 @@ update msg model =
 
         SegmentRolls nuSegment ->
             (doExploration model nuSegment, Cmd.none)
-            
-        MenuAction ->
+
+        Navigate ->
+            (model, Cmd.none)
+
+        Search ->
+            (model, Cmd.none)
+
+        Overcome ->
+            (model, Cmd.none)
+
+        Rest ->
+            (model, Cmd.none)
+
+        AskTheGM ->
+            (model, Cmd.none)
+
+        DummyMsg ->
             (model, Cmd.none)
         
         {- EnemyTurn ->
@@ -613,10 +634,11 @@ view model =
                 , width fill
                 ]
                 [ menuRow
-                , basicInstructionsRow
+                , basicInstructionsRow model
                 , advSelectionRow model
                 , moveSelectionRow model
                 ]
+
             , column
                 [ centerX
                 , Border.color (rgb255 0 0 0)
@@ -652,21 +674,56 @@ menuRow =
         [ spacing 10
         , centerX
         ]
-        [ otherButtons MenuAction "Adventurer Sheets"
-        , otherButtons MenuAction "Rules Summary"
-        , otherButtons MenuAction "Save & Exit"
+        [ otherButtons DummyMsg "Adventurer Sheets"
+        , otherButtons DummyMsg "Rules Summary"
+        , otherButtons DummyMsg "Save & Exit"
         ]
 
 
 
-basicInstructionsRow : Element msg
-basicInstructionsRow =
+basicInstructionsRow : Model -> Element msg
+basicInstructionsRow model =
     row
-        []
-        [ paragraph
-            []
-            [ el [Font.bold] (text "1. ")
-            , text "Freely describe what your Adventurer is doing. When this description matches a Move, do the Move." ]
+        [ spacing 10
+        , padding 10
+        ]
+
+        [ column
+            [ width (fillPortion 5)
+            , spacing 10
+            ]
+            [ paragraph
+                []
+                [ el [Font.bold] (text "1. ")
+                , text "All Players have a free flowing conversation about what their Adventurers say and do."
+                ]
+            , paragraph
+                []
+                [text "Only describe what "
+                , el [Font.bold] (text "your")
+                , text " Adventurer says and does."
+                ]
+            , paragraph
+                []
+                [ text " When this description matches a Move, then "
+                , el [Font.bold] (text "do the Move.")
+                ]
+            ]
+
+        , column
+            [ Border.width 2
+            , Border.rounded 10
+            , Border.color (rgb255 0 100 0)
+            , Background.color (rgb255 0 250 250)
+            , padding 10
+            , spacing 5
+            , width (fillPortion 1)
+            ]
+            [ el [Font.bold, centerX] (text "Delve Stats")
+            , text ("Discovery : " ++ (model.discoveryPts |> String.fromInt) )
+            , text ("Peril : " ++ (model.perilPts |> String.fromInt) )
+            , text ("Navigation : " ++ (model.navigationPts |> String.fromInt) )
+            ]
         ]
 
 
@@ -676,19 +733,28 @@ advSelectionRow model =
     row
         [ width fill, spacing 30 ]
         [ column
-            [ width (fillPortion 1), height fill]
+            [ width fill
+            , height fill
+            , spacing 10
+            ]
             [ paragraph
                 []
                 [ el [Font.bold] (text "2. ")
                 , text "Who is making a Move?"
                 ]
-            , el [Font.italic, centerX] (text "(select just one)")
-            ]
-        , column
-            [ width (fillPortion 2), spacing 15 ]
+            , el [Font.italic] (text "(select just one)")
+            , wrappedRow
+            [spacing 10]
             ( Dict.map advButtons model.adventurers
             |> Dict.values
             )
+            ]
+        
+        {- , column
+            [ width (fillPortion 2), spacing 15 ]
+            ( Dict.map advButtons model.adventurers
+            |> Dict.values
+            ) -}
         ]
 
     
@@ -696,12 +762,23 @@ advSelectionRow model =
 moveSelectionRow : Model -> Element Msg
 moveSelectionRow model =
     column
-        [width fill]
+        [width fill
+        , spacing 10
+        ]
         [ paragraph
                     []
                     [ el [Font.bold] (text "3. ")
                     , text "Which Move is being made?"
                     ]
+
+        , wrappedRow
+            [spacing 10]
+            [ otherButtons Navigate "When you NAVIGATE the current area."
+            , otherButtons Search "When you act to SEARCH the current area."
+            , otherButtons Overcome "When you try to OVERCOME an obstacle or challange."
+            , otherButtons Rest "When you let time PASS to get respite or get ready."
+            , otherButtons AskTheGM "When you ASK a question about the situation."
+            ]
 
         , row
             [ padding 10
@@ -856,7 +933,7 @@ sitchRow model =
         -- left side container
             (stdColumn ++ 
             [ width (fillPortion 2)
-            , spacing 40
+            , spacing 50
             ]
             )
 
@@ -864,7 +941,7 @@ sitchRow model =
             , someThingBox model 
             , someMoveBox model
             ]
-            
+
         -- right side container
         , column
             (stdColumn ++
@@ -881,7 +958,8 @@ sitchRow model =
 somePlaceBox : Model -> Element msg
 somePlaceBox model =
     column
-        [spacing 10]
+        [spacing 10
+        , width fill]
         [ paragraph
             [ Background.color (rgb255 211 211 211)
             , padding 5
@@ -904,7 +982,8 @@ someThingBox model =
         myThingText = someThingText model
     in
         column
-            [spacing 10]
+            [spacing 10
+            , width fill]
             [ paragraph
                 [ Background.color (rgb255 211 211 211)
                 , padding 5
@@ -970,19 +1049,21 @@ someMoveBox model =
 
                 _-> "some move error"
     in
-    column [spacing 10]
-                [ paragraph
-                    [ Background.color (rgb255 211 211 211)
-                    , padding 5
-                    ]
-                    [text ( content ) ]
+    column
+        [spacing 10
+        , width fill]
+        [ paragraph
+            [ Background.color (rgb255 211 211 211)
+            , padding 5
+            ]
+            [text ( content ) ]
 
-                , column
-                    []
-                    [ bulletListBuilder (somePlaceText model)
-                    , bulletListBuilder (placeOpeningsText2 model)
-                    ]
-                ]
+        , column
+            []
+            [ bulletListBuilder (somePlaceText model)
+            , bulletListBuilder (placeOpeningsText2 model)
+            ]
+        ]
 
 
 advPromptBox : Model -> List (Element Msg)
@@ -1233,6 +1314,6 @@ otherButtons msg name =
         ]
         (Input.button []
             { onPress = Just msg
-            , label = text name
+            , label = paragraph [] [el [] (text name)]
             }
         )
