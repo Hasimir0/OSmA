@@ -773,11 +773,26 @@ moveSelectionRow model =
 
         , wrappedRow
             [spacing 10]
-            [ otherButtons Navigate "When you NAVIGATE the current area."
-            , otherButtons Search "When you act to SEARCH the current area."
-            , otherButtons Overcome "When you try to OVERCOME an obstacle or challange."
-            , otherButtons Rest "When you let time PASS to get respite or get ready."
-            , otherButtons AskTheGM "When you ASK a question about the situation."
+            [ moveCategoryButtons Navigate
+                "When you "
+                "NAVIGATE"
+                " the current area..."
+            , moveCategoryButtons Search
+            "When you act to "
+            "SEARCH"
+            " the current area..."
+            , moveCategoryButtons Overcome
+            "When you try to "
+            "OVERCOME"
+            " an obstacle or challange..."
+            , moveCategoryButtons Rest
+            "When you let time "
+            "PASS"
+            " to get respite or get ready..."
+            , moveCategoryButtons AskTheGM
+            "When you "
+            "ASK"
+            " a question about the situation..."
             ]
 
         , row
@@ -1317,3 +1332,34 @@ otherButtons msg name =
             , label = paragraph [] [el [] (text name)]
             }
         )
+
+
+moveCategoryButtons : Msg -> String -> String -> String -> Element Msg
+moveCategoryButtons msg t1 t2 t3 =
+    el
+        [ Border.solid
+        , Border.color (rgb255 0 0 0)
+        , Border.width 1
+        , Border.rounded 10
+        , padding 5
+        --, centerX
+        , mouseOver [ Background.color (rgb255 0 255 0) ]
+        ]
+        (Input.button []
+            { onPress = Just msg
+            , label = moveButtonStructure t1 t2 t3
+            }
+        )
+
+moveButtonStructure : String -> String -> String -> Element Msg
+moveButtonStructure text1 text2 text3 =
+    column
+        [ spacing 5
+        , padding 5
+        , width (px 130)
+        --, centerX
+        ]
+        [ paragraph [] [ el [] (text text1) ]
+        , el [Font.bold] (text text2)
+        , paragraph [] [ text text3 ]
+        ]
