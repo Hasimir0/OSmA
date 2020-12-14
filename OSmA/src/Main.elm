@@ -57,8 +57,22 @@ type alias Model =
     , previousMove : (Maybe Move, String)
     , segment : Maybe Segment
     , sessionLocationList : List Int
+    , moveView : MoveView
     }
 
+
+
+
+type MoveView = MoveTypeList
+    | MoveSelect MoveListType
+    | MoveOutcome
+
+
+type MoveListType = TypeNavigate
+    | TypeSearch
+    | TypeOvercome
+    | TypeRest
+    | TypeAsk
 
 
 type alias Adventurer =
@@ -134,6 +148,7 @@ initialModel =
         , thingText = 0
         }
     , sessionLocationList = []
+    , moveView = MoveTypeList
     }
 
 
@@ -152,6 +167,7 @@ type Msg =
     | Confirm
     | SetMove (Move, String)
     | SegmentRolls Segment
+    | DisplayMoveTypes
 
 
 
@@ -227,19 +243,28 @@ update msg model =
             (doExploration model nuSegment, Cmd.none)
 
         Navigate ->
-            (model, Cmd.none)
+            ( { model | moveView = MoveSelect TypeNavigate }
+            , Cmd.none)
 
         Search ->
-            (model, Cmd.none)
+            ( { model | moveView = MoveSelect TypeSearch }
+            , Cmd.none)
 
         Overcome ->
-            (model, Cmd.none)
+            ( { model | moveView = MoveSelect TypeOvercome }
+            , Cmd.none)
 
         Rest ->
-            (model, Cmd.none)
+            ( { model | moveView = MoveSelect TypeRest }
+            , Cmd.none)
 
         AskTheGM ->
-            (model, Cmd.none)
+            ( { model | moveView = MoveSelect TypeAsk }
+            , Cmd.none)
+
+        DisplayMoveTypes ->
+            ( { model | moveView = MoveTypeList }
+            , Cmd.none)
 
         DummyMsg ->
             (model, Cmd.none)
@@ -624,14 +649,17 @@ view : Model -> Html Msg
 view model =
     Element.layout
         [ Background.color (rgb255 220 220 220) ]
-        ( row [centerX]
+        ( row
+            [ centerX
+            , Font.size 19
+            ]
             [ column
                 [ centerX
                 , Border.color (rgb255 0 0 0)
                 , Border.width 1
                 , padding 10
                 , spacing 30
-                , width fill
+                --, width fill
                 ]
                 [ menuRow
                 , basicInstructionsRow model
@@ -639,7 +667,7 @@ view model =
                 , moveSelectionRow model
                 ]
 
-            , column
+            {- , column
                 [ centerX
                 , Border.color (rgb255 0 0 0)
                 , Border.width 1
@@ -650,7 +678,7 @@ view model =
                 ]
                 [ scoresRow model
                 , sitchRow model
-                ]
+                ] -}
             ]
         )
 
@@ -684,27 +712,28 @@ menuRow =
 basicInstructionsRow : Model -> Element msg
 basicInstructionsRow model =
     row
-        [ spacing 10
+        [ spacing 30
         , padding 10
+        , height fill
         ]
 
         [ column
-            [ width (fillPortion 5)
-            , spacing 10
+            [ width (px 400)
+            , spacing 20
             ]
             [ paragraph
-                []
+                [Font.justify]
                 [ el [Font.bold] (text "1. ")
                 , text "All Players have a free flowing conversation about what their Adventurers say and do."
                 ]
             , paragraph
-                []
+                [Font.justify]
                 [text "Only describe what "
                 , el [Font.bold] (text "your")
                 , text " Adventurer says and does."
                 ]
             , paragraph
-                []
+                [Font.justify]
                 [ text " When this description matches a Move, then "
                 , el [Font.bold] (text "do the Move.")
                 ]
@@ -717,12 +746,24 @@ basicInstructionsRow model =
             , Background.color (rgb255 0 250 250)
             , padding 10
             , spacing 5
-            , width (fillPortion 1)
+            , alignTop
             ]
             [ el [Font.bold, centerX] (text "Delve Stats")
-            , text ("Discovery : " ++ (model.discoveryPts |> String.fromInt) )
-            , text ("Peril : " ++ (model.perilPts |> String.fromInt) )
-            , text ("Navigation : " ++ (model.navigationPts |> String.fromInt) )
+            , row
+                []
+                [ column
+                    []
+                    [ text "Discovery"
+                    , text "Peril"
+                    , text "Navigation"
+                    ]
+                , column
+                    []
+                    [ text (" : " ++ (model.discoveryPts |> String.fromInt) )
+                    , text (" : " ++ (model.perilPts |> String.fromInt) )
+                    , text (" : " ++ (model.navigationPts |> String.fromInt) )
+                    ]
+                ]
             ]
         ]
 
@@ -731,7 +772,7 @@ basicInstructionsRow model =
 advSelectionRow : Model -> Element Msg
 advSelectionRow model =
     row
-        [ width fill, spacing 30 ]
+        [ {- width fill, -} spacing 30 ]
         [ column
             [ width fill
             , height fill
@@ -742,19 +783,13 @@ advSelectionRow model =
                 [ el [Font.bold] (text "2. ")
                 , text "Who is making a Move?"
                 ]
-            , el [Font.italic] (text "(select just one)")
+            --, el [Font.italic] (text "(select just one)")
             , wrappedRow
             [spacing 10]
             ( Dict.map advButtons model.adventurers
             |> Dict.values
             )
             ]
-        
-        {- , column
-            [ width (fillPortion 2), spacing 15 ]
-            ( Dict.map advButtons model.adventurers
-            |> Dict.values
-            ) -}
         ]
 
     
@@ -762,8 +797,9 @@ advSelectionRow model =
 moveSelectionRow : Model -> Element Msg
 moveSelectionRow model =
     column
-        [width fill
+        [ width fill
         , spacing 10
+        , Background.color (rgb255 0 0 255)
         ]
         [ paragraph
                     []
@@ -771,36 +807,144 @@ moveSelectionRow model =
                     , text "Which Move is being made?"
                     ]
 
-        , wrappedRow
-            [spacing 10]
-            [ moveCategoryButtons Navigate
-                "When you "
-                "NAVIGATE"
-                " the current area..."
-            , moveCategoryButtons Search
-            "When you act to "
-            "SEARCH"
-            " the current area..."
-            , moveCategoryButtons Overcome
-            "When you try to "
-            "OVERCOME"
-            " an obstacle or challange..."
-            , moveCategoryButtons Rest
-            "When you let time "
-            "PASS"
-            " to get respite or get ready..."
-            , moveCategoryButtons AskTheGM
-            "When you "
-            "ASK"
-            " a question about the situation..."
+        , column
+            [ spacing 10 
+            , centerX
+            , Background.color (rgb255 200 0 0)
             ]
+            ( if
+                model.moveView == MoveTypeList
+            then 
+                [ row
+                    []
+                    [ moveCategoryButtons Navigate
+                        "When you "
+                        "NAVIGATE"
+                        " the current area..."
+                    , moveCategoryButtons Search
+                        "When you act to "
+                        "SEARCH"
+                        " the current area..."
+                    , moveCategoryButtons Overcome
+                        "When you try to "
+                        "OVERCOME"
+                        " an obstacle or a challange..."
+                    ]
+                , row
+                    []
+                    [ moveCategoryButtons Rest
+                        "When you let time "
+                        "PASS"
+                        " to get respite or get ready..."
+                    , moveCategoryButtons AskTheGM
+                        "When you "
+                        "ASK"
+                        " a question about the situation..."
+                    ]
+                ]
+            else
+                [otherButtons DisplayMoveTypes "BACK"]
+            )
 
-        , row
+        , column
             [ padding 10
             , spacing 30
+            --, width (px 450)
+            , Background.color (rgb255 0 200 0)
+            , centerX
             , width fill
             ]
-            [ column -- Navigate
+
+            (case model.moveView of
+                MoveTypeList ->
+                    [text "green column"]
+                
+                MoveSelect TypeNavigate ->
+                    navigateColumns model
+
+                MoveSelect TypeSearch ->
+                    []
+                MoveSelect TypeOvercome ->
+                    []
+                MoveSelect TypeRest ->
+                    []
+                MoveSelect TypeAsk ->
+                    []
+                MoveOutcome ->
+                    []
+            )
+        ]
+
+
+navigateColumns : Model -> List (Element Msg)
+navigateColumns model =
+    [ el
+        [centerX
+        , Font.bold
+        , padding 10]
+        (text "NAVIGATE")
+    
+    , row
+        [spacing 10]
+        [ column
+            [Background.color (rgb255 0 0 100)]
+            [ el [] ( moveButtons model (Orientate, "Orientate") )
+            , paragraph
+                [Background.color (rgb255 100 200 0)]
+                [ text "When you spend time consulting your maps and making sense of the area’s layout..."]
+            ]
+        , column
+            []
+            [text "row"
+            , text "row"
+            , text "row"
+            ]
+        , column
+            []
+            [text "row"
+            , text "row"
+            , text "row"
+            ]
+        ]
+
+    {-  , row
+        []
+        [ column
+            [-- width (fillPortion 1) 
+            ]
+            [ paragraph
+                []--( stdColumn )
+                [ moveButtons model (Orientate, "Orientate")
+                ]
+            , paragraph
+                []--( stdColumn )
+                [ text "When you spend time consulting your maps and making sense of the area’s layout..."]
+            ]
+        , column
+            [ --width (fillPortion 1) 
+            ]
+            [ paragraph
+                []--( stdColumn )
+                [ moveButtons model (DelveAhead, "Delve Ahead") ]
+            , paragraph
+                []--( stdColumn )
+                [ text "When you step into a new section hastily, carelessly or blindly..." ]
+        ]
+        , column
+            [-- width (fillPortion 1) 
+            ]
+            [ paragraph
+                []--( stdColumn )
+                [ moveButtons model (GoWatchfully, "Go Watchfully") ]
+            , paragraph
+                []--( stdColumn )
+                [ text "When you step into a new section slowly and carefully..." ]
+            ]
+        ] -}
+    ] 
+
+
+            {- [ column -- Navigate
                 [ width (fillPortion 1)
                 , spacing 10
                 , height fill
@@ -906,9 +1050,18 @@ moveSelectionRow model =
                     [ text "When you fight a dangerous opponent..." ]
                     ]
                 ]
-            ]
-        ]
+            ] 
+        ]-}
     
+
+
+
+
+
+
+
+
+
 
 scoresRow : Model -> Element Msg
 scoresRow model = 
@@ -1342,6 +1495,7 @@ moveCategoryButtons msg t1 t2 t3 =
         , Border.width 1
         , Border.rounded 10
         , padding 5
+        , height fill
         --, centerX
         , mouseOver [ Background.color (rgb255 0 255 0) ]
         ]
